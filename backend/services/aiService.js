@@ -1,4 +1,3 @@
-import { GPT4All } from 'gpt4all';
 import { NlpManager } from 'node-nlp';
 import Sentiment from 'sentiment';
 import nlp from 'compromise';
@@ -12,47 +11,20 @@ const __dirname = path.dirname(__filename);
 
 class AIService {
   constructor() {
-    this.gpt4all = null;
     this.nlpManager = new NlpManager({ languages: ['en'] });
     this.sentiment = new Sentiment();
     this.isLocalAIEnabled = process.env.ENABLE_LOCAL_AI === 'true';
     this.modelPath = process.env.AI_MODEL_PATH || path.join(__dirname, '../models');
-    this.modelFile = process.env.GPT4ALL_MODEL || 'ggml-gpt4all-j-v1.3-groovy.bin';
     
     this.initializeAI();
   }
 
   async initializeAI() {
     try {
-      if (this.isLocalAIEnabled) {
-        await this.initializeLocalAI();
-      }
       await this.initializeNLP();
       logger.info('AI Service initialized successfully');
     } catch (error) {
       logger.error('AI Service initialization failed:', error);
-    }
-  }
-
-  async initializeLocalAI() {
-    try {
-      const modelFilePath = path.join(this.modelPath, this.modelFile);
-      
-      if (!fs.existsSync(modelFilePath)) {
-        logger.warn(`GPT4All model not found at ${modelFilePath}. Using fallback methods.`);
-        return;
-      }
-
-      this.gpt4all = new GPT4All(this.modelFile, {
-        modelPath: this.modelPath,
-        allowDownload: false
-      });
-
-      await this.gpt4all.init();
-      logger.info('GPT4All model loaded successfully');
-    } catch (error) {
-      logger.error('Failed to initialize GPT4All:', error);
-      this.gpt4all = null;
     }
   }
 
@@ -113,20 +85,7 @@ class AIService {
     } = options;
 
     try {
-      // Try local AI first if available
-      if (this.gpt4all) {
-        const response = await this.gpt4all.generate(prompt, {
-          max_tokens: maxTokens,
-          temp: temperature
-        });
-        
-        if (response && response.trim()) {
-          logger.info('Generated text using GPT4All');
-          return response.trim();
-        }
-      }
-
-      // Fallback to category-specific generation
+      // Use rule-based generation with NLP libraries
       return await this.generateWithFallback(prompt, category, options);
 
     } catch (error) {
@@ -470,6 +429,70 @@ class AIService {
     }
   }
 
+  async analyzeReadability(text) {
+    try {
+      const doc = nlp(text);
+      const sentences = doc.sentences().out('array');
+      const words = doc.terms().out('array');
+      
+      // Basic readability metrics
+      const avgWordsPerSentence = words.length / sentences.length;
+      const avgSyllablesPerWord = words.reduce((sum, word) => {
+        return sum + this.countSyllables(word);
+      }, 0) / words.length;
+      
+      // Simple readability score (Flesch-like)
+      const readabilityScore = 206.835 - (1.015 * avgWordsPerSentence) - (84.6 * avgSyllablesPerWord);
+      
+      let level = 'Graduate';
+      if (readabilityScore >= 90) level = 'Very Easy';
+      else if (readabilityScore >= 80) level = 'Easy';
+      else if (readabilityScore >= 70) level = 'Fairly Easy';
+      else if (readabilityScore >= 60) level = 'Standard';
+      else if (readabilityScore >= 50) level = 'Fairly Difficult';
+      else if (readabilityScore >= 30) level = 'Difficult';
+
+      return {
+        score: Math.max(0, Math.min(100, readabilityScore)),
+        level,
+        metrics: {
+          sentences: sentences.length,
+          words: words.length,
+          avgWordsPerSentence: Math.round(avgWordsPerSentence * 10) / 10,
+          avgSyllablesPerWord: Math.round(avgSyllablesPerWord * 10) / 10
+        }
+      };
+    } catch (error) {
+      logger.error('Readability analysis error:', error);
+      return {
+        score: 50,
+        level: 'Standard',
+        metrics: {
+          sentences: 0,
+          words: 0,
+          avgWordsPerSentence: 0,
+          avgSyllablesPerWord: 0
+        }
+      };
+    }
+  }
+
+  countSyllables(word) {
+    if (!word) return 0;
+    word = word.toLowerCase();
+    if (word.length <= 3) return 1;
+    
+    // Remove ending e
+    word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '');
+    
+    // Remove ending y preceded by consonant
+    word = word.replace(/^y/, '');
+    
+    // Count vowel groups
+    const matches = word.match(/[aeiouy]{1,2}/g);
+    return matches ? matches.length : 1;
+  }
+
   async suggestTools(query) {
     try {
       const response = await this.nlpManager.process('en', query);
@@ -552,5 +575,12 @@ class AIService {
 
 // Create singleton instance
 const aiService = new AIService();
+
+// Export individual methods for convenience
+export const generateText = (prompt, options) => aiService.generateText(prompt, options);
+export const analyzeSentiment = (text) => aiService.analyzeSentiment(text);
+export const extractKeywords = (text, count) => aiService.extractKeywords(text, count);
+export const analyzeReadability = (text) => aiService.analyzeReadability(text);
+export const suggestTools = (query) => aiService.suggestTools(query);
 
 export default aiService;

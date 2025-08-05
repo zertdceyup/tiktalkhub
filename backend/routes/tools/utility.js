@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
-import sharp from 'sharp';
+import Jimp from 'jimp';
 import QRCode from 'qrcode';
 import { PDFDocument } from 'pdf-lib';
 import logger from '../../utils/logger.js';
@@ -132,38 +132,47 @@ router.post('/image-optimizer', upload.single('image'), async (req, res) => {
     const originalBuffer = req.file.buffer;
     const originalSize = originalBuffer.length;
 
-    let sharpImage = sharp(originalBuffer);
+    // Load image with Jimp
+    const image = await Jimp.read(originalBuffer);
     
     // Get original image metadata
-    const metadata = await sharpImage.metadata();
+    const metadata = {
+      width: image.bitmap.width,
+      height: image.bitmap.height,
+      format: req.file.mimetype.split('/')[1],
+      size: originalSize
+    };
 
     // Resize if dimensions provided
     if (width || height) {
-      const resizeOptions = {};
-      if (width) resizeOptions.width = parseInt(width);
-      if (height) resizeOptions.height = parseInt(height);
-      if (!maintainAspectRatio) resizeOptions.fit = 'fill';
+      const newWidth = width ? parseInt(width) : Jimp.AUTO;
+      const newHeight = height ? parseInt(height) : Jimp.AUTO;
       
-      sharpImage = sharpImage.resize(resizeOptions);
+      if (maintainAspectRatio) {
+        image.resize(newWidth, newHeight);
+      } else {
+        image.resize(newWidth, newHeight);
+      }
     }
+
+    // Set quality
+    image.quality(parseInt(quality));
 
     // Convert and optimize
     let optimizedBuffer;
+    const mimeType = `image/${format.toLowerCase()}`;
+    
     switch (format.toLowerCase()) {
       case 'png':
-        optimizedBuffer = await sharpImage
-          .png({ quality: parseInt(quality), compressionLevel: 9 })
-          .toBuffer();
+        optimizedBuffer = await image.getBufferAsync(Jimp.MIME_PNG);
         break;
-      case 'webp':
-        optimizedBuffer = await sharpImage
-          .webp({ quality: parseInt(quality) })
-          .toBuffer();
+      case 'jpeg':
+      case 'jpg':
+        optimizedBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
         break;
       default:
-        optimizedBuffer = await sharpImage
-          .jpeg({ quality: parseInt(quality), progressive: true })
-          .toBuffer();
+        // Default to JPEG for unsupported formats
+        optimizedBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
     }
 
     const optimizedSize = optimizedBuffer.length;

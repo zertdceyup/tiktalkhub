@@ -2,7 +2,7 @@ import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { body, validationResult } from 'express-validator';
-import db from '../database/init.js';
+import { runSQL, getSQL } from '../database/init.js';
 import { authenticateToken } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
 
@@ -29,7 +29,7 @@ router.post('/register', [
     const { email, password, username, first_name, last_name } = req.body;
 
     // Check if registrations are enabled
-    const registrationSetting = db.prepare('SELECT value FROM admin_settings WHERE key = ?').get('enable_registrations');
+    const registrationSetting = await getSQL('SELECT value FROM admin_settings WHERE key = ?', ['enable_registrations']);
     if (registrationSetting && registrationSetting.value === 'false') {
       return res.status(403).json({
         success: false,
@@ -38,7 +38,7 @@ router.post('/register', [
     }
 
     // Check if user already exists
-    const existingUser = db.prepare('SELECT id FROM users WHERE email = ? OR username = ?').get(email, username);
+    const existingUser = await getSQL('SELECT id FROM users WHERE email = ? OR username = ?', [email, username]);
     if (existingUser) {
       return res.status(400).json({
         success: false,
@@ -50,23 +50,23 @@ router.post('/register', [
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create user
-    const result = db.prepare(`
+    const result = await runSQL(`
       INSERT INTO users (email, password, username, first_name, last_name)
       VALUES (?, ?, ?, ?, ?)
-    `).run(email, hashedPassword, username, first_name, last_name);
+    `, [email, hashedPassword, username, first_name, last_name]);
 
     // Generate JWT token
     const token = jwt.sign(
-      { id: result.lastInsertRowid, email },
+      { id: result.lastID, email },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );
 
     // Get user data (without password)
-    const user = db.prepare(`
+    const user = await getSQL(`
       SELECT id, email, username, first_name, last_name, role, created_at
       FROM users WHERE id = ?
-    `).get(result.lastInsertRowid);
+    `, [result.lastID]);
 
     logger.info(`New user registered: ${email}`);
 
@@ -104,7 +104,7 @@ router.post('/login', [
     const { email, password } = req.body;
 
     // Find user
-    const user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+    const user = await getSQL('SELECT * FROM users WHERE email = ?', [email]);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -158,12 +158,12 @@ router.post('/login', [
 });
 
 // Get current user profile
-router.get('/profile', authenticateToken, (req, res) => {
+router.get('/profile', authenticateToken, async (req, res) => {
   try {
-    const user = db.prepare(`
+    const user = await getSQL(`
       SELECT id, email, username, first_name, last_name, avatar_url, role, created_at, updated_at
       FROM users WHERE id = ?
-    `).get(req.user.id);
+    `, [req.user.id]);
 
     if (!user) {
       return res.status(404).json({
@@ -209,7 +209,7 @@ router.put('/profile', authenticateToken, [
 
     if (username !== undefined) {
       // Check if username is already taken by another user
-      const existingUser = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(username, req.user.id);
+      const existingUser = await getSQL('SELECT id FROM users WHERE username = ? AND id != ?', [username, req.user.id]);
       if (existingUser) {
         return res.status(400).json({
           success: false,
@@ -246,15 +246,15 @@ router.put('/profile', authenticateToken, [
     const setClause = Object.keys(updates).map(key => `${key} = ?`).join(', ');
     params.push(new Date().toISOString(), req.user.id);
 
-    db.prepare(`
+    await runSQL(`
       UPDATE users SET ${setClause}, updated_at = ? WHERE id = ?
-    `).run(...params);
+    `, params);
 
     // Get updated user data
-    const updatedUser = db.prepare(`
+    const updatedUser = await getSQL(`
       SELECT id, email, username, first_name, last_name, avatar_url, role, created_at, updated_at
       FROM users WHERE id = ?
-    `).get(req.user.id);
+    `, [req.user.id]);
 
     logger.info(`User profile updated: ${req.user.email}`);
 
@@ -291,7 +291,7 @@ router.put('/change-password', authenticateToken, [
     const { currentPassword, newPassword } = req.body;
 
     // Get current user with password
-    const user = db.prepare('SELECT password FROM users WHERE id = ?').get(req.user.id);
+    const user = await getSQL('SELECT password FROM users WHERE id = ?', [req.user.id]);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -312,8 +312,8 @@ router.put('/change-password', authenticateToken, [
     const hashedNewPassword = await bcrypt.hash(newPassword, 12);
 
     // Update password
-    db.prepare('UPDATE users SET password = ?, updated_at = ? WHERE id = ?')
-      .run(hashedNewPassword, new Date().toISOString(), req.user.id);
+    await runSQL('UPDATE users SET password = ?, updated_at = ? WHERE id = ?',
+      [hashedNewPassword, new Date().toISOString(), req.user.id]);
 
     logger.info(`Password changed for user: ${req.user.email}`);
 

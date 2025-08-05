@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
-import db from '../database/init.js';
+import { getSQL } from '../database/init.js';
 import logger from '../utils/logger.js';
 
-export const authenticateToken = (req, res, next) => {
+export const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
 
@@ -13,7 +13,7 @@ export const authenticateToken = (req, res, next) => {
     });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
     if (err) {
       logger.warn(`JWT verification failed: ${err.message}`);
       return res.status(403).json({
@@ -24,7 +24,7 @@ export const authenticateToken = (req, res, next) => {
 
     // Get fresh user data from database
     try {
-      const userData = db.prepare('SELECT id, email, username, role, is_active FROM users WHERE id = ?').get(user.id);
+      const userData = await getSQL('SELECT id, email, username, role, is_active FROM users WHERE id = ?', [user.id]);
       
       if (!userData || !userData.is_active) {
         return res.status(403).json({
@@ -55,7 +55,7 @@ export const requireAdmin = (req, res, next) => {
   next();
 };
 
-export const optionalAuth = (req, res, next) => {
+export const optionalAuth = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -64,12 +64,12 @@ export const optionalAuth = (req, res, next) => {
     return next();
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET, async (err, user) => {
     if (err) {
       req.user = null;
     } else {
       try {
-        const userData = db.prepare('SELECT id, email, username, role, is_active FROM users WHERE id = ?').get(user.id);
+        const userData = await getSQL('SELECT id, email, username, role, is_active FROM users WHERE id = ?', [user.id]);
         req.user = userData && userData.is_active ? userData : null;
       } catch (error) {
         req.user = null;
