@@ -1,0 +1,44 @@
+services:
+  # Backend API Service
+  - type: web
+    name: tiktalkhub-backend
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        value: ./database/tiktalkhub.db
+      - key: ADMIN_EMAIL
+        value: admin@tiktalkhub.com
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: ENABLE_LOCAL_AI
+        value: false
+      - key: MAX_FILE_SIZE
+        value: 10485760
+      - key: UPLOAD_PATH
+        value: ./uploads
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+      - key: FRONTEND_URL
+        value: https://tiktalkhub-frontend.onrender.com
+      - key: ALLOWED_ORIGINS
+        value: https://tiktalkhub-frontend.onrender.com,http://localhost:5173
+      - key: POSTS_PER_PAGE
+        value: 10
+      - key: AUTO_GENERATE_POSTS
+        value: true
+
+databases:
+  # SQLite will be used as file-based database
+  # No external database service needed for free tier
