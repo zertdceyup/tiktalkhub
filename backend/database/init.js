@@ -293,7 +293,16 @@ export const initializeDatabase = async () => {
       { key: 'enable_ai_features', value: 'true', type: 'boolean', category: 'ai', description: 'Enable AI features' },
       { key: 'posts_per_page', value: '10', type: 'number', category: 'blog', description: 'Blog posts per page' },
       { key: 'adsense_code', value: '', category: 'monetization', description: 'Google AdSense code' },
-      { key: 'analytics_code', value: '', category: 'analytics', description: 'Google Analytics code' }
+      { key: 'analytics_code', value: '', category: 'analytics', description: 'Google Analytics code' },
+      // New AI/TTS/ASR/Tiko settings
+      { key: 'enable_local_ai', value: 'true', type: 'boolean', category: 'ai', description: 'Use local AI engines' },
+      { key: 'ai_model_path', value: '', category: 'ai', description: 'Local AI model path' },
+      { key: 'whisper_bin', value: '', category: 'ai', description: 'Path to whisper.cpp binary' },
+      { key: 'whisper_model', value: 'ggml-base.en.bin', category: 'ai', description: 'Whisper model filename' },
+      { key: 'tts_bin', value: '', category: 'ai', description: 'Path to TTS binary' },
+      { key: 'tts_voice', value: 'en_US', category: 'ai', description: 'Default TTS voice' },
+      { key: 'tiko_persona', value: 'Helpful, concise, and friendly concierge', category: 'tiko', description: 'Tiko AI persona prompt' },
+      { key: 'tiko_suggestions_enabled', value: 'true', type: 'boolean', category: 'tiko', description: 'Enable Tiko tool suggestions' }
     ];
 
     for (const setting of defaultSettings) {
@@ -356,7 +365,7 @@ export const initializeDatabase = async () => {
       { name: 'QR Code Generator', slug: 'qr-generator', category: 'utility', description: 'Generate QR codes', icon: '📱' },
       { name: 'Image Remixer', slug: 'image-remixer', category: 'utility', description: 'Apply effects to images', icon: '🖼️' },
       { name: 'Text Summarizer', slug: 'text-summarizer', category: 'content', description: 'Summarize long text', icon: '📝' },
-      { name: 'Voice Notes to Text', slug: 'voice-notes-to-text', category: 'content', description: 'Transcribe audio to text', icon: '🎙️' }
+      { name: 'Voice Notes to Text', slug: 'voice-notes-to-text', category: 'content', description: 'Transcribe audio to text', icon: '🎙️' },
       { name: 'Image Optimizer', slug: 'image-optimizer', category: 'utility', description: 'Optimize images', icon: '🖼️' },
       { name: 'AI Meme Generator', slug: 'ai-meme-generator', category: 'utility', description: 'Generate memes with AI', icon: '😂' }
     ];

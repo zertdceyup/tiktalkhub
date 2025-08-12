@@ -23,7 +23,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { authenticateToken } from './middleware/auth.js';
 
 // Import database initialization
-import { initializeDatabase } from './database/init.js';
+import { initializeDatabase, allSQL } from './database/init.js';
 
 // Import logger
 import logger from './utils/logger.js';
@@ -155,6 +155,17 @@ app.get('/api/og-image', async (req, res) => {
     res.send(buf);
   } catch (e) {
     res.status(500).json({ success: false, message: 'Failed to render OG image' });
+  }
+});
+
+// Public settings (read-only subset)
+app.get('/api/public/settings', async (req, res) => {
+  try {
+    const rows = await allSQL('SELECT key, value, category FROM admin_settings WHERE key IN ("site_name","site_description","enable_ai_features","enable_local_ai","tiko_persona","tiko_suggestions_enabled")');
+    const settings = rows.reduce((acc, r) => { acc[r.key] = r.value; return acc; }, {});
+    res.json({ success: true, settings });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch public settings' });
   }
 });
 

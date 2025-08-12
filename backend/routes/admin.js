@@ -702,4 +702,73 @@ router.post('/notifications', [
   }
 });
 
+// Templates Management
+router.get('/templates', (req, res) => {
+  try {
+    const templates = db.prepare('SELECT * FROM templates ORDER BY created_at DESC').all();
+    res.json({ success: true, templates });
+  } catch (e) {
+    logger.error('Templates fetch error:', e);
+    res.status(500).json({ success: false, message: 'Failed to fetch templates' });
+  }
+});
+
+router.post('/templates', [
+  body('name').isLength({ min: 1, max: 100 }),
+  body('type').isLength({ min: 1, max: 50 }),
+  body('category').optional().isLength({ max: 50 }),
+  body('file_path').optional().isString(),
+  body('thumbnail_path').optional().isString(),
+  body('config').optional().isString()
+], (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { name, type, category, file_path, thumbnail_path, config } = req.body;
+    const result = db.prepare(`INSERT INTO templates (name, type, category, file_path, thumbnail_path, config) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(name, type, category || null, file_path || null, thumbnail_path || null, config || null);
+    res.status(201).json({ success: true, templateId: result.lastInsertRowid });
+  } catch (e) {
+    logger.error('Template create error:', e);
+    res.status(500).json({ success: false, message: 'Failed to create template' });
+  }
+});
+
+router.put('/templates/:id', [
+  body('name').optional().isLength({ min: 1, max: 100 }),
+  body('type').optional().isLength({ min: 1, max: 50 }),
+  body('category').optional().isLength({ max: 50 }),
+  body('file_path').optional().isString(),
+  body('thumbnail_path').optional().isString(),
+  body('config').optional().isString()
+], (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { id } = req.params;
+    const updates = req.body;
+    if (Object.keys(updates).length === 0) return res.status(400).json({ success: false, message: 'No fields to update' });
+    const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    const params = [...Object.values(updates), new Date().toISOString(), id];
+    const result = db.prepare(`UPDATE templates SET ${setClause}, updated_at = ? WHERE id = ?`).run(...params);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Template not found' });
+    res.json({ success: true, message: 'Template updated' });
+  } catch (e) {
+    logger.error('Template update error:', e);
+    res.status(500).json({ success: false, message: 'Failed to update template' });
+  }
+});
+
+router.delete('/templates/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = db.prepare('DELETE FROM templates WHERE id = ?').run(id);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Template not found' });
+    res.json({ success: true, message: 'Template deleted' });
+  } catch (e) {
+    logger.error('Template delete error:', e);
+    res.status(500).json({ success: false, message: 'Failed to delete template' });
+  }
+});
+
 export default router;

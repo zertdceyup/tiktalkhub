@@ -80,6 +80,14 @@ const PDFToImage = React.lazy(() => import('./pages/tools/utility/PDFToImage'));
 import CaptionOverlay from "./pages/tools/video/CaptionOverlay";
 import TrendingAudio from "./pages/tools/tiktok/TrendingAudio";
 const AdminSettings = React.lazy(() => import('./pages/admin/Settings'));
+const ReadabilityChecker = React.lazy(() => import('./pages/tools/content/ReadabilityChecker'));
+const ContentRepurposer = React.lazy(() => import('./pages/tools/content/ContentRepurposer'));
+const IdeaToScript = React.lazy(() => import('./pages/tools/content/IdeaToScript'));
+const SocialHookAnalyzer = React.lazy(() => import('./pages/tools/content/SocialHookAnalyzer'));
+const AdminPosts = React.lazy(() => import('./pages/admin/Posts'));
+const AdminTools = React.lazy(() => import('./pages/admin/Tools'));
+const AdminTemplates = React.lazy(() => import('./pages/admin/Templates'));
+const AdminTikoConfig = React.lazy(() => import('./pages/admin/TikoConfig'));
 
 const queryClient = new QueryClient();
 
@@ -105,6 +113,10 @@ const App = () => (
           <Route path="/help" element={<HelpCenter />} />
           <Route path="/careers" element={<Careers />} />
           <Route path="/admin/settings" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminSettings /></React.Suspense>} />
+          <Route path="/admin/posts" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminPosts /></React.Suspense>} />
+          <Route path="/admin/tools" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminTools /></React.Suspense>} />
+          <Route path="/admin/templates" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminTemplates /></React.Suspense>} />
+          <Route path="/admin/tiko" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminTikoConfig /></React.Suspense>} />
           
           {/* Tool Categories */}
           <Route path="/tools/smartbiz" element={<SmartBiz />} />
@@ -154,6 +166,10 @@ const App = () => (
            <Route path="/tools/general/twitter-thread-previewer" element={<TwitterThreadPreviewer />} />
            <Route path="/tools/content/text-summarizer" element={<TextSummarizer />} />
            <Route path="/tools/content/voice-notes-to-text" element={<VoiceNotesToText />} />
+          <Route path="/tools/content/readability-checker" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><ReadabilityChecker /></React.Suspense>} />
+          <Route path="/tools/content/content-repurposer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><ContentRepurposer /></React.Suspense>} />
+          <Route path="/tools/content/idea-to-script" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><IdeaToScript /></React.Suspense>} />
+          <Route path="/tools/content/social-hook-analyzer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><SocialHookAnalyzer /></React.Suspense>} />
           <Route path="/tools/utility/image-optimizer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><ImageOptimizer /></React.Suspense>} />
           <Route path="/tools/utility/pdf-merger" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><PDFMerger /></React.Suspense>} />
           <Route path="/tools/utility/youtube-thumbnail-downloader" element={<YouTubeThumbnailDownloader />} />
