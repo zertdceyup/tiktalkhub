@@ -50,6 +50,11 @@ import GifMaker from "./pages/tools/video/GifMaker";
 import QRCodeGenerator from "./pages/tools/utility/QRCodeGenerator";
 import ImageOptimizer from "./pages/tools/utility/ImageOptimizer";
 import PDFMerger from "./pages/tools/utility/PDFMerger";
+import TwitterThreadFormatter from "./pages/tools/social/TwitterThreadFormatter";
+import HashtagGenerator from "./pages/tools/social/HashtagGenerator";
+import FacebookCaptionCreator from "./pages/tools/social/FacebookCaptionCreator";
+import HashtagHeatmap from "./pages/tools/tiktok/HashtagHeatmap";
+import ViralHookGenerator from "./pages/tools/tiktok/ViralHookGenerator";
 
 const queryClient = new QueryClient();
 
@@ -92,9 +97,14 @@ const App = () => (
           <Route path="/tools/video/thumbnail-selector" element={<ThumbnailSelector />} />
           <Route path="/tools/video/gif-maker" element={<GifMaker />} />
           <Route path="/tools/social" element={<SocialTools />} />
+          <Route path="/tools/social/hashtag-generator" element={<HashtagGenerator />} />
+          <Route path="/tools/social/twitter-thread-formatter" element={<TwitterThreadFormatter />} />
+          <Route path="/tools/social/facebook-caption-creator" element={<FacebookCaptionCreator />} />
           <Route path="/tools/general" element={<General />} />
           <Route path="/tools/text-tools" element={<TextTools />} />
           <Route path="/tools/tiktok" element={<TikTokTools />} />
+          <Route path="/tools/tiktok/hashtag-heatmap" element={<HashtagHeatmap />} />
+          <Route path="/tools/tiktok/viral-hook-generator" element={<ViralHookGenerator />} />
           <Route path="/tools/ai-creator" element={<AICreator />} />
           <Route path="/tools/blog" element={<BlogSEO />} />
           <Route path="/tools/content/blog-idea-generator" element={<BlogIdeaGenerator />} />

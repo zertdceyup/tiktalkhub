@@ -450,9 +450,8 @@ class ApiClient {
 
   async formatTwitterThread(data: {
     content: string;
-    maxTweets?: number;
-    addNumbers?: boolean;
-  }): Promise<ApiResponse<{ tweets: string[]; processingTime: number }>> {
+    maxTweetLength?: number;
+  }): Promise<ApiResponse<{ thread: string[]; totalTweets: number; originalLength: number; processingTime: number }>> {
     return this.request('/tools/social/twitter-thread-formatter', {
       method: 'POST',
       body: JSON.stringify(data),
