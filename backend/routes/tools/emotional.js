@@ -194,6 +194,58 @@ router.post('/moodboard-ai', [
   }
 });
 
+// CulturaCare - culture-specific mental health suggestions
+router.post('/culturacare', [
+  body('culture').isString(),
+  body('concern').isLength({ min: 1, max: 1000 })
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { culture, concern } = req.body;
+    const baseTips = {
+      general: ['Practice gratitude daily', 'Maintain social connection', 'Prioritize sleep hygiene', 'Regular physical activity'],
+      east_asian: ['Balance work and rest; consider Tai Chi or meditation', 'Leverage community/family support', 'Herbal teas and warm foods for calming'],
+      south_asian: ['Mindfulness and pranayama (breathing)', 'Ayurvedic routines for balance', 'Respect rest cycles and community rituals'],
+      latinx: ['Family-oriented support and storytelling', 'Music/dance for mood elevation', 'Spiritual practices as desired'],
+      african: ['Community engagement and faith-based support', 'Nature walks/grounding', 'Journaling and cultural music'],
+    };
+    const key = culture?.toLowerCase().replace(/[^a-z]/g,'_');
+    const tips = baseTips[key] || baseTips.general;
+    const processingTime = Date.now() - start;
+    if (req.trackUsage) req.trackUsage('culturacare', req.user?.id, req.ip, req.get('User-Agent'), { culture }, { tips: tips.length }, processingTime);
+    res.json({ success: true, data: { culture, concern, suggestions: tips, processingTime } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to provide cultura care tips' });
+  }
+});
+
+// Mental Health Planner - AI plan based on mood/test results
+router.post('/mental-health-planner', [
+  body('mood').isIn(['happy','sad','anxious','excited','angry','calm','stressed','neutral']),
+  body('goals').optional().isArray(),
+  body('assessment').optional().isObject()
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { mood, goals = [], assessment = {} } = req.body;
+    const plan = {
+      daily: ['10-min mindfulness practice', '15-min walk', 'Drink water regularly'],
+      weekly: ['Connect with a friend/family', 'Journal 3x/week', 'Try a hobby session'],
+      resources: ['Crisis hotline info', 'Local support groups', 'Cognitive behavioral exercises']
+    };
+    const adjustments = mood === 'anxious' ? ['Box breathing 4-4-4-4', 'Limit caffeine'] : mood === 'sad' ? ['Sunlight exposure', 'Gratitude list'] : [];
+    const processingTime = Date.now() - start;
+    if (req.trackUsage) req.trackUsage('mental-health-planner', req.user?.id, req.ip, req.get('User-Agent'), { mood }, { plan: true }, processingTime);
+    res.json({ success: true, data: { mood, goals, assessment, plan: { ...plan, adjustments }, processingTime } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to generate plan' });
+  }
+});
+
 // Helper functions
 const generateMindMirrorReflection = (entry, sentiment, mood) => {
   const reflections = {
