@@ -523,6 +523,14 @@ class ApiClient {
     });
   }
 
+  async buildBioLink(data: { title: string; bio?: string; theme?: 'light'|'dark'|'neon'; links: { label: string; url: string }[]; socials?: Record<string,string> }): Promise<ApiResponse<{ shareId: string; preview: any; processingTime: number }>> {
+    return this.request('/tools/social/bio-link-builder', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async shortenLink(data: { url: string; customCode?: string; expireDays?: number }): Promise<ApiResponse<{ shortCode: string; shortUrl: string; target: string; expiresAt: string; processingTime: number }>> {
+    return this.request('/tools/social/link-shortener', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // TikTok tools
   async tiktokHashtagHeatmap(data: {
     hashtags: string[];

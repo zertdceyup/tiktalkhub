@@ -58,6 +58,8 @@ import PDFMerger from "./pages/tools/utility/PDFMerger";
 import TwitterThreadFormatter from "./pages/tools/social/TwitterThreadFormatter";
 import HashtagGenerator from "./pages/tools/social/HashtagGenerator";
 import FacebookCaptionCreator from "./pages/tools/social/FacebookCaptionCreator";
+import BioLinkBuilder from "./pages/tools/social/BioLinkBuilder";
+import LinkShortener from "./pages/tools/social/LinkShortener";
 import HashtagHeatmap from "./pages/tools/tiktok/HashtagHeatmap";
 import ViralHookGenerator from "./pages/tools/tiktok/ViralHookGenerator";
 import MindMirror from "./pages/tools/emotional/MindMirror";
@@ -120,6 +122,8 @@ const App = () => (
           <Route path="/tools/social/hashtag-generator" element={<HashtagGenerator />} />
           <Route path="/tools/social/twitter-thread-formatter" element={<TwitterThreadFormatter />} />
           <Route path="/tools/social/facebook-caption-creator" element={<FacebookCaptionCreator />} />
+           <Route path="/tools/social/bio-link-builder" element={<BioLinkBuilder />} />
+           <Route path="/tools/social/link-shortener" element={<LinkShortener />} />
           <Route path="/tools/general" element={<General />} />
           <Route path="/tools/text-tools" element={<TextTools />} />
           <Route path="/tools/tiktok" element={<TikTokTools />} />

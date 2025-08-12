@@ -338,6 +338,8 @@ export const initializeDatabase = async () => {
       // Social Tools
       { name: 'Hashtag Generator', slug: 'hashtag-generator', category: 'social', description: 'Generate trending hashtags', icon: '#️⃣' },
       { name: 'Twitter Thread Formatter', slug: 'twitter-thread-formatter', category: 'social', description: 'Format Twitter threads', icon: '🐦' },
+      { name: 'Instagram Bio Link Builder', slug: 'bio-link-builder', category: 'social', description: 'Create bio link landing pages', icon: '🔗' },
+      { name: 'Link Shortener', slug: 'link-shortener', category: 'social', description: 'Shorten and track links', icon: '🔗' },
 
       // TikTok Tools
       { name: 'TikTok Hashtag Heatmap', slug: 'tiktok-hashtag-heatmap', category: 'tiktok', description: 'Analyze TikTok hashtags', icon: '🔥' },

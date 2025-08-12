@@ -18,39 +18,45 @@ const SocialTools = () => {
       description: "Research and generate trending hashtags for any platform",
       icon: Hash,
       features: ["Trending analysis", "Competition tracking", "Performance metrics"],
-      popular: true
+      popular: true,
+      route: "/tools/social/hashtag-generator"
     },
     {
       name: "Twitter/X Formatter",
       description: "Format and optimize your Twitter threads",
       icon: Twitter,
-      features: ["Thread templates", "Character counting", "Engagement optimization"]
+      features: ["Thread templates", "Character counting", "Engagement optimization"],
+      route: "/tools/social/twitter-thread-formatter"
     },
     {
       name: "Caption Writer",
       description: "AI-powered captions for Instagram, Facebook, and X",
       icon: PenTool,
       features: ["Platform-specific styles", "Emoji suggestions", "CTA optimization"],
-      popular: true
+      popular: true,
+      route: "/tools/social/facebook-caption-creator"
     },
     {
       name: "Instagram Bio Link Builder",
       description: "Create beautiful landing pages for your bio link",
       icon: Instagram,
-      features: ["Custom themes", "Analytics tracking", "Mobile optimized"]
+      features: ["Custom themes", "Analytics tracking", "Mobile optimized"],
+      route: "/tools/social/bio-link-builder"
     },
     {
       name: "QR Code Generator",
       description: "Generate custom QR codes for any purpose",
       icon: QrCode,
       features: ["Custom styling", "Logo embedding", "High resolution"],
-      popular: true
+      popular: true,
+      route: "/tools/utility/qr-code-generator"
     },
     {
       name: "Link Shortener",
       description: "Shorten and track your social media links",
       icon: Link,
-      features: ["Custom domains", "Click analytics", "UTM parameters"]
+      features: ["Custom domains", "Click analytics", "UTM parameters"],
+      route: "/tools/social/link-shortener"
     }
   ];
 
@@ -173,7 +179,7 @@ const SocialTools = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant="outline">
+                  <Button className="w-full" variant="outline" onClick={() => (tool as any).route ? window.location.assign((tool as any).route) : null}>
                     Try Now
                   </Button>
                 </CardContent>
