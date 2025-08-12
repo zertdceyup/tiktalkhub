@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createCanvas, registerFont } from 'canvas';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -119,15 +120,42 @@ app.get('/sitemap.xml', (req, res) => {
   res.type('application/xml').send(body);
 });
 
-// placeholder OG image endpoint
+// dynamic OG image endpoint (real rendering)
 app.get('/api/og-image', async (req, res) => {
-  // For now, return a 1x1 PNG; later integrate dynamic image rendering
-  const img = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP4BwQACfsD/q+Hj7kAAAAASUVORK5CYII=',
-    'base64'
-  );
-  res.setHeader('Content-Type', 'image/png');
-  res.send(img);
+  try {
+    const { title = 'Tiktalkhub', subtitle = '' } = req.query;
+    const width = 1200, height = 630;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, width, height);
+    grad.addColorStop(0, '#0f0c29');
+    grad.addColorStop(0.5, '#302b63');
+    grad.addColorStop(1, '#24243e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 64px Arial';
+    const t = String(title);
+    const tw = ctx.measureText(t).width;
+    ctx.fillText(t, (width - tw) / 2, height / 2 - 20);
+
+    // Subtitle / brand
+    ctx.fillStyle = '#a78bfa';
+    ctx.font = 'normal 32px Arial';
+    const s = subtitle ? String(subtitle) : 'tiktalkhub.com';
+    const sw = ctx.measureText(s).width;
+    ctx.fillText(s, (width - sw) / 2, height / 2 + 40);
+
+    const buf = canvas.toBuffer('image/png');
+    res.setHeader('Content-Type', 'image/png');
+    res.send(buf);
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to render OG image' });
+  }
 });
 
 // API routes
