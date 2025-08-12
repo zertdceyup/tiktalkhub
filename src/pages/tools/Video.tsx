@@ -41,20 +41,23 @@ const VideoTools = () => {
       description: "Clean audio with AI noise reduction",
       icon: Volume2,
       features: ["Background noise removal", "Echo cancellation", "Voice enhancement"],
-      popular: false
+      popular: false,
+      route: "/tools/video/noise-remover"
     },
     {
       name: "Shorts Vertical Cropper",
       description: "Convert landscape videos to vertical shorts",
       icon: Crop,
       features: ["Smart framing", "Face detection", "Auto-crop"],
-      popular: true
+      popular: true,
+      route: "/tools/video/shorts-vertical-cropper"
     },
     {
       name: "GIF Converter",
       description: "Convert videos to high-quality GIFs",
       icon: Download,
-      features: ["Size optimization", "Frame rate control", "Loop settings"]
+      features: ["Size optimization", "Frame rate control", "Loop settings"],
+      route: "/tools/video/gif-maker"
     }
   ];
 
