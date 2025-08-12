@@ -572,6 +572,31 @@ class ApiClient {
     });
   }
 
+  async splitPDF(data: { file: File; ranges?: string; mode?: 'ranges' | 'every'; everyN?: number }): Promise<ApiResponse<{ pageCount: number; parts: { label: string; pdf: string }[]; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('pdf', data.file);
+    if (data.ranges) formData.append('ranges', data.ranges);
+    if (data.mode) formData.append('mode', data.mode);
+    if (data.everyN) formData.append('everyN', String(data.everyN));
+    return this.request('/tools/utility/pdf-splitter', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async protectPDF(data: { file: File; password?: string }): Promise<ApiResponse<{ protectedPdf: string; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('pdf', data.file);
+    if (data.password) formData.append('password', data.password);
+    return this.request('/tools/utility/pdf-password-protector', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async pdfToImage(data: { file: File; format?: 'png'|'jpg'; width?: number; height?: number }): Promise<ApiResponse<{ pageCount: number; images: { page: number; url: string }[]; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('pdf', data.file);
+    if (data.format) formData.append('format', data.format);
+    if (data.width) formData.append('width', String(data.width));
+    if (data.height) formData.append('height', String(data.height));
+    return this.request('/tools/utility/pdf-to-image', { method: 'POST', body: formData, headers: {} });
+  }
+
   // AI endpoints
   async chatWithTiko(data: {
     message: string;

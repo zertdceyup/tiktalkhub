@@ -59,6 +59,9 @@ import MindMirror from "./pages/tools/emotional/MindMirror";
 import Therapet from "./pages/tools/emotional/Therapet";
 import MoodBoardAI from "./pages/tools/emotional/MoodBoardAI";
 import YouTubeThumbnailDownloader from "./pages/tools/utility/YouTubeThumbnailDownloader";
+import PDFSplitter from "./pages/tools/utility/PDFSplitter";
+import PDFPasswordProtector from "./pages/tools/utility/PDFPasswordProtector";
+import PDFToImage from "./pages/tools/utility/PDFToImage";
 
 const queryClient = new QueryClient();
 
@@ -120,6 +123,9 @@ const App = () => (
           <Route path="/tools/utility/image-optimizer" element={<ImageOptimizer />} />
           <Route path="/tools/utility/pdf-merger" element={<PDFMerger />} />
           <Route path="/tools/utility/youtube-thumbnail-downloader" element={<YouTubeThumbnailDownloader />} />
+          <Route path="/tools/utility/pdf-splitter" element={<PDFSplitter />} />
+          <Route path="/tools/utility/pdf-password-protector" element={<PDFPasswordProtector />} />
+          <Route path="/tools/utility/pdf-to-image" element={<PDFToImage />} />
           <Route path="/tools/emotional" element={<EmotionalUtility />} />
           <Route path="/tools/emotional/mindmirror" element={<MindMirror />} />
           <Route path="/tools/emotional/therapet" element={<Therapet />} />

@@ -557,6 +557,143 @@ router.post('/youtube-thumbnail', [
   }
 });
 
+// PDF Splitter
+router.post('/pdf-splitter', upload.single('pdf'), async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No PDF file provided' });
+    }
+
+    const { ranges = '', mode = 'ranges', everyN = 1 } = req.body;
+
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const pageCount = pdfDoc.getPageCount();
+
+    const parts = [];
+
+    if (mode === 'ranges') {
+      // ranges like "1-3,5,7-8"
+      const tokens = String(ranges)
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      for (const token of tokens) {
+        let [start, end] = token.split('-').map(n => parseInt(n, 10));
+        if (isNaN(start)) continue;
+        if (isNaN(end)) end = start;
+        start = Math.max(1, start);
+        end = Math.min(pageCount, end);
+        if (start > end) continue;
+        const newDoc = await PDFDocument.create();
+        const copied = await newDoc.copyPages(pdfDoc, Array.from({ length: end - start + 1 }, (_, i) => i + (start - 1)));
+        copied.forEach(p => newDoc.addPage(p));
+        const bytes = await newDoc.save();
+        parts.push({ label: `${start}-${end}`, pdf: `data:application/pdf;base64,${Buffer.from(bytes).toString('base64')}` });
+      }
+    } else if (mode === 'every') {
+      const n = Math.max(1, parseInt(everyN, 10) || 1);
+      for (let i = 0; i < pageCount; i += n) {
+        const end = Math.min(i + n - 1, pageCount - 1);
+        const newDoc = await PDFDocument.create();
+        const copied = await newDoc.copyPages(pdfDoc, Array.from({ length: end - i + 1 }, (_, j) => i + j));
+        copied.forEach(p => newDoc.addPage(p));
+        const bytes = await newDoc.save();
+        parts.push({ label: `${i + 1}-${end + 1}`, pdf: `data:application/pdf;base64,${Buffer.from(bytes).toString('base64')}` });
+      }
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage('pdf-splitter', req.user?.id, req.ip, req.get('User-Agent'), { pageCount, mode }, { parts: parts.length }, processingTime);
+    }
+
+    res.json({ success: true, data: { pageCount, parts, processingTime } });
+  } catch (error) {
+    logger.error('PDF splitter error:', error);
+    res.status(500).json({ success: false, message: 'Failed to split PDF' });
+  }
+});
+
+// PDF Password Protector (watermark-based demo)
+router.post('/pdf-password-protector', upload.single('pdf'), async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No PDF file provided' });
+    }
+    const { password = '' } = req.body;
+
+    const src = await PDFDocument.load(req.file.buffer);
+    const font = await src.embedFont('Helvetica-Bold');
+
+    for (let i = 0; i < src.getPageCount(); i++) {
+      const page = src.getPage(i);
+      const { width, height } = page.getSize();
+      page.drawText(password ? `Protected: ${password}` : 'Protected', {
+        x: width / 4,
+        y: height / 2,
+        size: 24,
+        opacity: 0.25,
+        rotate: { type: 'degrees', angle: 30 },
+        font
+      });
+    }
+
+    const bytes = await src.save();
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage('pdf-password-protector', req.user?.id, req.ip, req.get('User-Agent'), { hasPassword: !!password }, { pageCount: src.getPageCount() }, processingTime);
+    }
+
+    res.json({ success: true, data: { protectedPdf: `data:application/pdf;base64,${Buffer.from(bytes).toString('base64')}`, processingTime, note: 'Demo watermark-based protection. Encryption not applied.' } });
+  } catch (error) {
+    logger.error('PDF password protector error:', error);
+    res.status(500).json({ success: false, message: 'Failed to protect PDF' });
+  }
+});
+
+// PDF to Image Converter (mock preview rendering)
+router.post('/pdf-to-image', upload.single('pdf'), async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No PDF file provided' });
+    }
+
+    const { format = 'png', width = 800, height = 600 } = req.body;
+    const pdfDoc = await PDFDocument.load(req.file.buffer);
+    const pageCount = pdfDoc.getPageCount();
+
+    // Mock: generate placeholder image per page using Jimp
+    const images = [];
+    for (let i = 0; i < pageCount; i++) {
+      const image = new Jimp(parseInt(width) || 800, parseInt(height) || 600, '#ffffff');
+      const text = `PDF Page ${i + 1}`;
+      // Jimp default font
+      const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
+      image.print(font, 20, 20, text);
+      const dataUrl = await image.getBase64Async(format === 'png' ? Jimp.MIME_PNG : Jimp.MIME_JPEG);
+      images.push({ page: i + 1, url: dataUrl });
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage('pdf-to-image', req.user?.id, req.ip, req.get('User-Agent'), { pageCount, format }, { images: images.length }, processingTime);
+    }
+
+    res.json({ success: true, data: { pageCount, images, processingTime, note: 'Demo preview rendering. For production, integrate actual PDF rasterization.' } });
+  } catch (error) {
+    logger.error('PDF to image error:', error);
+    res.status(500).json({ success: false, message: 'Failed to convert PDF to images' });
+  }
+});
+
 function extractYouTubeId(input) {
   if (!input) return null;
   const str = String(input).trim();
