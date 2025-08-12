@@ -771,4 +771,41 @@ router.delete('/templates/:id', (req, res) => {
   }
 });
 
+// Page Settings (design tokens per page)
+router.get('/page-settings', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM page_settings').all();
+    res.json({ success: true, pages: rows });
+  } catch (e) {
+    logger.error('Page settings fetch error:', e);
+    res.status(500).json({ success: false, message: 'Failed to fetch page settings' });
+  }
+});
+
+router.post('/page-settings', [ body('page_path').isLength({ min: 1 }), body('tokens_json').isString() ], (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { page_path, tokens_json } = req.body;
+    const result = db.prepare('INSERT OR REPLACE INTO page_settings (id, page_path, tokens_json, updated_at) VALUES ((SELECT id FROM page_settings WHERE page_path = ?), ?, ?, ?)')
+      .run(page_path, page_path, tokens_json, new Date().toISOString());
+    res.status(201).json({ success: true, id: result.lastInsertRowid });
+  } catch (e) {
+    logger.error('Page settings save error:', e);
+    res.status(500).json({ success: false, message: 'Failed to save page settings' });
+  }
+});
+
+router.delete('/page-settings/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = db.prepare('DELETE FROM page_settings WHERE id = ?').run(id);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Page settings not found' });
+    res.json({ success: true, message: 'Deleted' });
+  } catch (e) {
+    logger.error('Page settings delete error:', e);
+    res.status(500).json({ success: false, message: 'Failed to delete page settings' });
+  }
+});
+
 export default router;

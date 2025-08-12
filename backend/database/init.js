@@ -253,6 +253,17 @@ export const initializeDatabase = async () => {
       )
     `);
 
+    // Page settings (per-route design tokens)
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS page_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_path TEXT UNIQUE NOT NULL,
+        tokens_json TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create indexes for better performance
     await runSQL('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
     await runSQL('CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug)');

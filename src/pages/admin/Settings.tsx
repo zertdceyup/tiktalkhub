@@ -61,7 +61,70 @@ const SettingsPage: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Page Design Tokens Manager */}
+      <PageTokensManager />
     </div>
+  );
+};
+
+const PageTokensManager: React.FC = () => {
+  const [pages, setPages] = useState<any[]>([]);
+  const [path, setPath] = useState<string>('');
+  const [tokens, setTokens] = useState<string>('{}');
+
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const base = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+
+  const fetchPages = async () => {
+    const res = await fetch(`${base}/admin/page-settings`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) throw new Error('Failed to load page settings');
+    const j = await res.json();
+    setPages(j.pages || []);
+  };
+
+  useEffect(() => { fetchPages(); }, []);
+
+  const save = async () => {
+    const res = await fetch(`${base}/admin/page-settings`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ page_path: path, tokens_json: tokens }) });
+    if (!res.ok) { alert('Save failed'); return; }
+    setPath(''); setTokens('{}'); fetchPages();
+  };
+
+  const remove = async (id: number) => {
+    const res = await fetch(`${base}/admin/page-settings/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { alert('Delete failed'); return; }
+    fetchPages();
+  };
+
+  return (
+    <Card className="mt-8">
+      <CardHeader><CardTitle>Page Design Tokens</CardTitle></CardHeader>
+      <CardContent>
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Create / Update</div>
+            <Input placeholder="Page path (e.g., /tools/video)" value={path} onChange={(e) => setPath(e.target.value)} />
+            <textarea className="w-full h-40 rounded border p-2 text-sm font-mono" value={tokens} onChange={(e) => setTokens(e.target.value)} placeholder='{"--brand":"#111","--accent":"#a78bfa"}' />
+            <Button className="btn-gold" onClick={save}>Save Tokens</Button>
+          </div>
+          <div className="space-y-2">
+            <div className="text-sm font-medium">Existing Pages</div>
+            <div className="space-y-2">
+              {pages.map((p) => (
+                <div key={p.id} className="border rounded p-3 text-sm flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-medium">{p.page_path}</div>
+                    <pre className="whitespace-pre-wrap break-all text-muted-foreground">{p.tokens_json}</pre>
+                  </div>
+                  <Button variant="destructive" onClick={() => remove(p.id)}>Delete</Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
