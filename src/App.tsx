@@ -55,6 +55,9 @@ import HashtagGenerator from "./pages/tools/social/HashtagGenerator";
 import FacebookCaptionCreator from "./pages/tools/social/FacebookCaptionCreator";
 import HashtagHeatmap from "./pages/tools/tiktok/HashtagHeatmap";
 import ViralHookGenerator from "./pages/tools/tiktok/ViralHookGenerator";
+import MindMirror from "./pages/tools/emotional/MindMirror";
+import Therapet from "./pages/tools/emotional/Therapet";
+import MoodBoardAI from "./pages/tools/emotional/MoodBoardAI";
 
 const queryClient = new QueryClient();
 
@@ -116,6 +119,9 @@ const App = () => (
           <Route path="/tools/utility/image-optimizer" element={<ImageOptimizer />} />
           <Route path="/tools/utility/pdf-merger" element={<PDFMerger />} />
           <Route path="/tools/emotional" element={<EmotionalUtility />} />
+          <Route path="/tools/emotional/mindmirror" element={<MindMirror />} />
+          <Route path="/tools/emotional/therapet" element={<Therapet />} />
+          <Route path="/tools/emotional/moodboard-ai" element={<MoodBoardAI />} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
