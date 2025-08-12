@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TikoAI from '@/components/TikoAI';
 import SEO from '@/components/SEO';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -81,6 +82,15 @@ const PDF = () => {
     }
   ];
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'PDF Toolkit',
+    url: typeof window !== 'undefined' ? window.location.href : '',
+    hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web', url: `${baseUrl}/tools/pdf` }))
+  };
+
   return (
     <div className="min-h-screen">
       <Header />
@@ -88,7 +98,11 @@ const PDF = () => {
         title="PDF Tools - Manage, Edit, Convert, and Secure Your PDFs" 
         description="A comprehensive toolkit for managing, editing, converting, and securing your PDF documents. Combine, split, compress, and protect your files with ease." 
         keywords="PDF tools, PDF management, PDF editing, PDF conversion, PDF security, PDF optimization" 
+        jsonLd={jsonLd}
       />
+      <div className="container mx-auto px-6">
+        <Breadcrumbs trail={[{ name: 'Home', href: '/' }, { name: 'PDF Tools' }]} jsonLdBaseUrl={baseUrl} />
+      </div>
       
       {/* Hero Section */}
       <section className="py-20 relative overflow-hidden">
@@ -154,7 +168,7 @@ const PDF = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant="outline">
+                  <Button className="w-full" variant="outline" onClick={() => window.location.assign('/tools/utility/pdf-merger')}>
                     Try Now
                   </Button>
                 </CardContent>

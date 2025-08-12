@@ -9,8 +9,9 @@ import { Label } from '@/components/ui/label';
 import { useMutation } from '@tanstack/react-query';
 import api, { getErrorMessage } from '@/lib/api';
 import SEO from '@/components/SEO';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
-const GifMaker: React.FC = () => {
+const GifMaker: React.FC = () => { const [progress, setProgress] = useState<number>(0);
   const [file, setFile] = useState<File | null>(null);
   const [startTime, setStartTime] = useState<number>(0);
   const [duration, setDuration] = useState<number>(3);
@@ -18,15 +19,30 @@ const GifMaker: React.FC = () => {
   const [quality, setQuality] = useState<'low'|'medium'|'high'>('medium');
   const [gif, setGif] = useState<any | null>(null);
 
+  const uploadWithProgress = (): Promise<any> => new Promise((resolve, reject) => {
+    if (!file) return reject(new Error('No file'));
+    const form = new FormData();
+    form.append('video', file);
+    if (startTime !== undefined) form.append('startTime', String(startTime));
+    if (duration !== undefined) form.append('duration', String(duration));
+    form.append('fps', String(fps));
+    form.append('quality', quality);
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tools/video/gif-maker`);
+    const token = localStorage.getItem('auth_token'); if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100)); };
+    xhr.onreadystatechange = () => { if (xhr.readyState === 4) { try { const res = JSON.parse(xhr.responseText); if (xhr.status >= 200 && xhr.status < 300 && res?.success) resolve(res.data); else reject(new Error(res?.message || 'Upload failed')); } catch (err) { reject(err); } } };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.send(form);
+  });
+
   const { mutate, isPending } = useMutation({
-    mutationFn: async () => {
-      if (!file) throw new Error('Please select a video file');
-      const res = await api.createGif({ file, startTime, duration, fps, quality });
-      return res.data as any;
-    },
+    mutationFn: async () => uploadWithProgress(),
     onSuccess: (data) => setGif(data.gif),
     onError: (err) => alert(getErrorMessage(err))
   });
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
 
   return (
     <div className="min-h-screen">
@@ -35,8 +51,12 @@ const GifMaker: React.FC = () => {
         description="Convert videos to high-quality GIFs with control over duration, FPS, and quality."
         keywords={["gif maker","video to gif","create gif"]}
         canonical="/tools/video/gif-maker"
+        jsonLd={{ '@context': 'https://schema.org', '@type': 'SoftwareApplication', name: 'GIF Maker', applicationCategory: 'MultimediaApplication', operatingSystem: 'Web', url: (typeof window !== 'undefined' ? window.location.href : ''), offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' } }}
       />
       <Header />
+      <div className="container mx-auto px-6">
+        <Breadcrumbs trail={[{ name: 'Home', href: '/' }, { name: 'Video Tools', href: '/tools/video' }, { name: 'GIF Maker' }]} jsonLdBaseUrl={baseUrl} />
+      </div>
       <section className="py-12">
         <div className="container mx-auto px-6 max-w-4xl">
           <Card className="tiktok-card">
@@ -47,7 +67,10 @@ const GifMaker: React.FC = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Video file</Label>
-                <Input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                <div className="border rounded p-4 text-center hover:bg-secondary/30 cursor-pointer" onDragOver={(e) => { e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) setFile(f); }}>
+                  <div>Drag & drop or click to select</div>
+                  <Input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                </div>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="space-y-2">
@@ -74,6 +97,11 @@ const GifMaker: React.FC = () => {
               <div className="flex gap-3">
                 <Button className="btn-gold" onClick={() => mutate()} disabled={isPending}>Create GIF</Button>
               </div>
+              {isPending && (
+                <div className="w-full bg-secondary rounded h-2 overflow-hidden">
+                  <div className="bg-primary h-2 transition-all" style={{ width: `${progress}%` }} />
+                </div>
+              )}
               {gif && (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Frames: {gif.output?.frames}, Size: {Math.round((gif.output?.size||0)/1024)} KB</p>
