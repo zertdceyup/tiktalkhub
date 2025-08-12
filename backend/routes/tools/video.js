@@ -2,174 +2,102 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
 import logger from '../../utils/logger.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '../../uploads/video');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const router = express.Router();
 
 // Configure multer for video uploads
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => cb(null, `${Date.now()}_${Math.round(Math.random()*1e6)}_${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`)
+});
 const upload = multer({ 
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid video file type'), false);
-    }
+    if (allowedTypes.includes(file.mimetype)) cb(null, true); else cb(new Error('Invalid video file type'));
   }
 });
 
-// Video Trimmer (Mock implementation)
+function runFFmpeg(args) {
+  return new Promise((resolve, reject) => {
+    const ff = spawn(process.env.FFMPEG_PATH || 'ffmpeg', ['-y', ...args]);
+    let stderr = '';
+    ff.stderr.on('data', d => { stderr += d.toString(); });
+    ff.on('close', code => {
+      if (code === 0) resolve(stderr);
+      else reject(new Error(`ffmpeg exited with code ${code}: ${stderr}`));
+    });
+  });
+}
+
+// Video Trimmer - real ffmpeg
 router.post('/video-trimmer', upload.single('video'), [
   body('startTime').isFloat({ min: 0 }),
   body('endTime').isFloat({ min: 0 }),
   body('outputFormat').optional().isIn(['mp4', 'webm', 'mov'])
 ], async (req, res) => {
   const startTime = Date.now();
-  
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No video file provided'
-      });
-    }
-
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation errors',
-        errors: errors.array()
-      });
-    }
-
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
     const { startTime: trimStart, endTime: trimEnd, outputFormat = 'mp4' } = req.body;
-
-    // Mock video processing
-    const originalDuration = 120; // Mock duration in seconds
-    const trimmedDuration = trimEnd - trimStart;
-
-    const result = {
-      originalFile: {
-        name: req.file.originalname,
-        size: req.file.size,
-        duration: originalDuration
-      },
-      trimmedVideo: {
-        url: `/api/video/trimmed-${Date.now()}.${outputFormat}`,
-        format: outputFormat,
-        duration: trimmedDuration,
-        startTime: trimStart,
-        endTime: trimEnd,
-        estimatedSize: Math.floor(req.file.size * (trimmedDuration / originalDuration))
-      }
-    };
-
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const outPath = path.join(uploadsDir, `${base}_trimmed.${outputFormat}`);
+    await runFFmpeg(['-ss', String(trimStart), '-to', String(trimEnd), '-i', inputPath, '-c', 'copy', outPath]);
     const processingTime = Date.now() - startTime;
-
-    // Track usage
-    if (req.trackUsage) {
-      req.trackUsage(
-        'video-trimmer',
-        req.user?.id,
-        req.ip,
-        req.get('User-Agent'),
-        { originalSize: req.file.size, outputFormat, duration: trimmedDuration },
-        { trimmedSize: result.trimmedVideo.estimatedSize },
-        processingTime
-      );
-    }
-
-    res.json({
-      success: true,
-      data: {
-        ...result,
-        processingTime,
-        note: 'This is a demo implementation. In production, actual video processing would occur.'
-      }
-    });
-
+    if (req.trackUsage) req.trackUsage('video-trimmer', req.user?.id, req.ip, req.get('User-Agent'), { input: path.basename(inputPath), outputFormat }, { outPath: path.basename(outPath) }, processingTime);
+    res.json({ success: true, data: { trimmedVideo: { url: `/uploads/video/${path.basename(outPath)}`, format: outputFormat }, processingTime } });
   } catch (error) {
     logger.error('Video trimmer error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to trim video'
-    });
+    res.status(500).json({ success: false, message: 'Failed to trim video' });
   }
 });
 
-// Thumbnail Selector (Mock implementation)
+// Thumbnail Selector - real ffmpeg extracting N thumbs evenly
 router.post('/thumbnail-selector', upload.single('video'), [
   body('count').optional().isInt({ min: 1, max: 20 })
 ], async (req, res) => {
   const startTime = Date.now();
-  
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No video file provided'
-      });
-    }
-
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
     const { count = 6 } = req.body;
-
-    // Mock thumbnail extraction
-    const thumbnails = [];
-    const videoDuration = 120; // Mock duration
-    
-    for (let i = 0; i < count; i++) {
-      const timestamp = (videoDuration / count) * i;
-      thumbnails.push({
-        id: i + 1,
-        timestamp,
-        url: `/api/thumbnails/thumb-${Date.now()}-${i}.jpg`,
-        width: 1920,
-        height: 1080
-      });
-    }
-
-    const processingTime = Date.now() - startTime;
-
-    // Track usage
-    if (req.trackUsage) {
-      req.trackUsage(
-        'thumbnail-selector',
-        req.user?.id,
-        req.ip,
-        req.get('User-Agent'),
-        { videoSize: req.file.size, count },
-        { thumbnailsGenerated: thumbnails.length },
-        processingTime
-      );
-    }
-
-    res.json({
-      success: true,
-      data: {
-        videoInfo: {
-          name: req.file.originalname,
-          size: req.file.size,
-          duration: videoDuration
-        },
-        thumbnails,
-        processingTime,
-        note: 'This is a demo implementation. In production, actual thumbnails would be extracted.'
-      }
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    // Probe duration
+    const probe = spawn(process.env.FFPROBE_PATH || 'ffprobe', ['-v','error','-show_entries','format=duration','-of','default=nk=1:nw=1', inputPath]);
+    const duration = await new Promise((resolve) => {
+      let out=''; probe.stdout.on('data', d => out += d.toString());
+      probe.on('close', () => resolve(parseFloat(out) || 60));
     });
-
+    const thumbs = [];
+    for (let i = 1; i <= Number(count); i++) {
+      const ts = Math.max(0, (duration / (Number(count)+1)) * i);
+      const outJpg = path.join(uploadsDir, `${base}_thumb_${i}.jpg`);
+      await runFFmpeg(['-ss', String(ts), '-i', inputPath, '-frames:v','1','-q:v','2', outJpg]);
+      thumbs.push({ id: i, timestamp: ts, url: `/uploads/video/${path.basename(outJpg)}`, width: 0, height: 0 });
+    }
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('thumbnail-selector', req.user?.id, req.ip, req.get('User-Agent'), { count: Number(count) }, { thumbnails: thumbs.length }, processingTime);
+    res.json({ success: true, data: { thumbnails: thumbs, processingTime } });
   } catch (error) {
     logger.error('Thumbnail selector error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to extract thumbnails'
-    });
+    res.status(500).json({ success: false, message: 'Failed to extract thumbnails' });
   }
 });
 
-// GIF Maker (Mock implementation)
+// GIF Maker - real ffmpeg
 router.post('/gif-maker', upload.single('video'), [
   body('startTime').optional().isFloat({ min: 0 }),
   body('duration').optional().isFloat({ min: 0.1, max: 10 }),
@@ -177,77 +105,26 @@ router.post('/gif-maker', upload.single('video'), [
   body('fps').optional().isInt({ min: 5, max: 30 })
 ], async (req, res) => {
   const startTime = Date.now();
-  
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No video file provided'
-      });
-    }
-
-    const { 
-      startTime: gifStart = 0, 
-      duration = 3, 
-      quality = 'medium', 
-      fps = 15 
-    } = req.body;
-
-    // Mock GIF creation
-    const qualityMultiplier = { low: 0.3, medium: 0.6, high: 1.0 };
-    const estimatedSize = Math.floor(req.file.size * 0.1 * qualityMultiplier[quality]);
-
-    const gifData = {
-      url: `/api/gifs/generated-${Date.now()}.gif`,
-      originalVideo: req.file.originalname,
-      settings: {
-        startTime: gifStart,
-        duration,
-        quality,
-        fps
-      },
-      output: {
-        size: estimatedSize,
-        width: quality === 'high' ? 480 : quality === 'medium' ? 320 : 240,
-        height: quality === 'high' ? 270 : quality === 'medium' ? 180 : 135,
-        frames: Math.floor(duration * fps)
-      }
-    };
-
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { startTime: gifStart = 0, duration = 3, quality = 'medium', fps = 15 } = req.body;
+    const scale = quality === 'high' ? '480:-1' : quality === 'medium' ? '320:-1' : '240:-1';
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const palette = path.join(uploadsDir, `${base}_palette.png`);
+    const outGif = path.join(uploadsDir, `${base}.gif`);
+    await runFFmpeg(['-ss', String(gifStart), '-t', String(duration), '-i', inputPath, '-vf', `fps=${fps},scale=${scale}:flags=lanczos,palettegen`, palette]);
+    await runFFmpeg(['-ss', String(gifStart), '-t', String(duration), '-i', inputPath, '-i', palette, '-lavfi', `fps=${fps},scale=${scale}:flags=lanczos [x]; [x][1:v] paletteuse`, outGif]);
     const processingTime = Date.now() - startTime;
-
-    // Track usage
-    if (req.trackUsage) {
-      req.trackUsage(
-        'gif-maker',
-        req.user?.id,
-        req.ip,
-        req.get('User-Agent'),
-        { videoSize: req.file.size, quality, duration, fps },
-        { gifSize: estimatedSize, frames: gifData.output.frames },
-        processingTime
-      );
-    }
-
-    res.json({
-      success: true,
-      data: {
-        gif: gifData,
-        processingTime,
-        note: 'This is a demo implementation. In production, actual GIF would be created.'
-      }
-    });
-
+    if (req.trackUsage) req.trackUsage('gif-maker', req.user?.id, req.ip, req.get('User-Agent'), { duration, fps, quality }, { out: path.basename(outGif) }, processingTime);
+    res.json({ success: true, data: { gif: { url: `/uploads/video/${path.basename(outGif)}` }, processingTime } });
   } catch (error) {
     logger.error('GIF maker error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create GIF'
-    });
+    res.status(500).json({ success: false, message: 'Failed to create GIF' });
   }
 });
 
-// Caption Overlay (Mock implementation)
+// Caption Overlay - burn subtitles via ffmpeg using SRT
 router.post('/caption-overlay', upload.single('video'), [
   body('captions').isArray({ min: 1 }),
   body('font').optional().isString(),
@@ -258,32 +135,20 @@ router.post('/caption-overlay', upload.single('video'), [
 ], async (req, res) => {
   const startTime = Date.now();
   try {
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: 'No video file provided' });
-    }
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
-    }
-    const { captions, font = 'Inter', size = 24, color = '#ffffff', background = 'rgba(0,0,0,0.5)', position = 'bottom' } = req.body;
-
-    // Mock: build SRT from captions
-    const srt = captions.map((c, idx) => `${idx + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}\n`).join('\n');
-
-    const output = {
-      url: `/api/video/captioned-${Date.now()}.mp4`,
-      style: { font, size, color, background, position },
-      srt,
-      captionCount: captions.length
-    };
-
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { captions } = req.body;
+    const list = Array.isArray(captions) ? captions : JSON.parse(captions);
+    const srt = list.map((c, idx) => `${idx + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}\n`).join('\n');
+    const srtPath = path.join(uploadsDir, `${Date.now()}_${Math.round(Math.random()*1e6)}.srt`);
+    fs.writeFileSync(srtPath, srt, 'utf8');
+    const inputPath = req.file.path;
+    const outPath = path.join(uploadsDir, `${path.parse(inputPath).name}_captioned.mp4`);
+    await runFFmpeg(['-i', inputPath, '-vf', `subtitles='${srtPath.replace(/:/g, '\\:')}'`, '-c:a','copy', outPath]);
     const processingTime = Date.now() - startTime;
-
-    if (req.trackUsage) {
-      req.trackUsage('caption-overlay', req.user?.id, req.ip, req.get('User-Agent'), { style: { font, size, position } }, { captionCount: captions.length }, processingTime);
-    }
-
-    res.json({ success: true, data: { output, processingTime, note: 'Demo implementation. In production, burn-in rendering would occur.' } });
+    if (req.trackUsage) req.trackUsage('caption-overlay', req.user?.id, req.ip, req.get('User-Agent'), { captionCount: list.length }, { out: path.basename(outPath) }, processingTime);
+    res.json({ success: true, data: { output: { url: `/uploads/video/${path.basename(outPath)}` }, processingTime } });
   } catch (error) {
     logger.error('Caption overlay error:', error);
     res.status(500).json({ success: false, message: 'Failed to overlay captions' });
