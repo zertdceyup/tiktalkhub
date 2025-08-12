@@ -125,6 +125,45 @@ router.post('/viral-hook-generator', [
   }
 });
 
+// Trending Audio Detector (Mock)
+router.post('/trending-audio', [
+  body('query').optional().isString(),
+  body('timeframe').optional().isIn(['24h','7d','30d']),
+  body('limit').optional().isInt({ min: 1, max: 50 })
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { query = '', timeframe = '7d', limit = 15 } = req.body;
+
+    const seed = ['On The Rise','Viral Beat','Loop Wave','Chill Vibes','Hype Drop','Soft Piano','Trap Loop','Retro Synth','Acoustic Hook','Summer Breeze','Epic Trailer','Dance Hit'];
+    const results = Array.from({ length: limit }).map((_, i) => ({
+      id: `${Date.now()}_${i}`,
+      title: `${seed[i % seed.length]} ${i + 1}`,
+      previewUrl: `/api/audio/preview-${i}.mp3`,
+      usageCount: Math.floor(Math.random() * 100000) + 500,
+      weeklyGrowth: (Math.random() * 200 - 50).toFixed(1),
+      categories: ['dance','vlog','comedy','education','fashion'].filter(() => Math.random() > 0.5),
+      createdAt: new Date(Date.now() - Math.floor(Math.random() * 86400000 * 30)).toISOString()
+    }));
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage('tiktok-trending-audio', req.user?.id, req.ip, req.get('User-Agent'), { query, timeframe, limit }, { results: results.length }, processingTime);
+    }
+
+    res.json({ success: true, data: { query, timeframe, results, processingTime, note: 'Demo data returned.' } });
+  } catch (error) {
+    logger.error('Trending audio detector error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch trending audio' });
+  }
+});
+
 // Helper functions
 const generateViralHooks = (topic, style, count) => {
   const hookTemplates = {

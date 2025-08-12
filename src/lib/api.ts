@@ -512,6 +512,10 @@ class ApiClient {
     });
   }
 
+  async tiktokTrendingAudio(data: { query?: string; timeframe?: '24h'|'7d'|'30d'; limit?: number }): Promise<ApiResponse<{ query: string; timeframe: string; results: any[]; processingTime: number }>> {
+    return this.request('/tools/tiktok/trending-audio', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // Emotional tools
   async mindMirror(data: { journalEntry: string; mood?: 'happy' | 'sad' | 'anxious' | 'excited' | 'angry' | 'calm' | 'stressed' | 'neutral' }): Promise<ApiResponse<{ originalEntry: string; sentiment: any; mood?: string; reflection: string; suggestions: string[]; processingTime: number }>> {
     return this.request('/tools/emotional/mindmirror', { method: 'POST', body: JSON.stringify(data) });

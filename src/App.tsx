@@ -63,6 +63,7 @@ import PDFSplitter from "./pages/tools/utility/PDFSplitter";
 import PDFPasswordProtector from "./pages/tools/utility/PDFPasswordProtector";
 import PDFToImage from "./pages/tools/utility/PDFToImage";
 import CaptionOverlay from "./pages/tools/video/CaptionOverlay";
+import TrendingAudio from "./pages/tools/tiktok/TrendingAudio";
 
 const queryClient = new QueryClient();
 
@@ -114,6 +115,7 @@ const App = () => (
           <Route path="/tools/tiktok" element={<TikTokTools />} />
           <Route path="/tools/tiktok/hashtag-heatmap" element={<HashtagHeatmap />} />
           <Route path="/tools/tiktok/viral-hook-generator" element={<ViralHookGenerator />} />
+          <Route path="/tools/tiktok/trending-audio" element={<TrendingAudio />} />
           <Route path="/tools/ai-creator" element={<AICreator />} />
           <Route path="/tools/blog" element={<BlogSEO />} />
           <Route path="/tools/content/blog-idea-generator" element={<BlogIdeaGenerator />} />
