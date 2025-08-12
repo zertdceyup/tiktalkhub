@@ -434,6 +434,26 @@ class ApiClient {
     });
   }
 
+  async captionOverlay(data: {
+    file: File;
+    captions: { start: number; end: number; text: string }[];
+    font?: string;
+    size?: number;
+    color?: string;
+    background?: string;
+    position?: 'top' | 'bottom' | 'middle';
+  }): Promise<ApiResponse<{ output: { url: string; style: any; srt: string; captionCount: number }; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    formData.append('captions', JSON.stringify(data.captions));
+    if (data.font) formData.append('font', data.font);
+    if (data.size) formData.append('size', String(data.size));
+    if (data.color) formData.append('color', data.color);
+    if (data.background) formData.append('background', data.background);
+    if (data.position) formData.append('position', data.position);
+    return this.request('/tools/video/caption-overlay', { method: 'POST', body: formData, headers: {} });
+  }
+
   // Social tools
   async generateHashtags(data: {
     content: string;

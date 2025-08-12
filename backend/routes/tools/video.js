@@ -247,4 +247,56 @@ router.post('/gif-maker', upload.single('video'), [
   }
 });
 
+// Caption Overlay (Mock implementation)
+router.post('/caption-overlay', upload.single('video'), [
+  body('captions').isArray({ min: 1 }),
+  body('font').optional().isString(),
+  body('size').optional().isInt({ min: 10, max: 96 }),
+  body('color').optional().isString(),
+  body('background').optional().isString(),
+  body('position').optional().isIn(['top','bottom','middle']),
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file provided' });
+    }
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+    const { captions, font = 'Inter', size = 24, color = '#ffffff', background = 'rgba(0,0,0,0.5)', position = 'bottom' } = req.body;
+
+    // Mock: build SRT from captions
+    const srt = captions.map((c, idx) => `${idx + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}\n`).join('\n');
+
+    const output = {
+      url: `/api/video/captioned-${Date.now()}.mp4`,
+      style: { font, size, color, background, position },
+      srt,
+      captionCount: captions.length
+    };
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage('caption-overlay', req.user?.id, req.ip, req.get('User-Agent'), { style: { font, size, position } }, { captionCount: captions.length }, processingTime);
+    }
+
+    res.json({ success: true, data: { output, processingTime, note: 'Demo implementation. In production, burn-in rendering would occur.' } });
+  } catch (error) {
+    logger.error('Caption overlay error:', error);
+    res.status(500).json({ success: false, message: 'Failed to overlay captions' });
+  }
+});
+
+function formatSrtTime(seconds) {
+  const s = Number(seconds) || 0;
+  const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const ss = String(Math.floor(s % 60)).padStart(2, '0');
+  const ms = String(Math.floor((s - Math.floor(s)) * 1000)).padStart(3, '0');
+  return `${hh}:${mm}:${ss},${ms}`;
+}
+
 export default router;

@@ -62,6 +62,7 @@ import YouTubeThumbnailDownloader from "./pages/tools/utility/YouTubeThumbnailDo
 import PDFSplitter from "./pages/tools/utility/PDFSplitter";
 import PDFPasswordProtector from "./pages/tools/utility/PDFPasswordProtector";
 import PDFToImage from "./pages/tools/utility/PDFToImage";
+import CaptionOverlay from "./pages/tools/video/CaptionOverlay";
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,7 @@ const App = () => (
           <Route path="/tools/video/trimmer" element={<VideoTrimmer />} />
           <Route path="/tools/video/thumbnail-selector" element={<ThumbnailSelector />} />
           <Route path="/tools/video/gif-maker" element={<GifMaker />} />
+          <Route path="/tools/video/caption-overlay" element={<CaptionOverlay />} />
           <Route path="/tools/social" element={<SocialTools />} />
           <Route path="/tools/social/hashtag-generator" element={<HashtagGenerator />} />
           <Route path="/tools/social/twitter-thread-formatter" element={<TwitterThreadFormatter />} />
