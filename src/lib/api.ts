@@ -229,6 +229,19 @@ class ApiClient {
     });
   }
 
+  async generateFlyerDesign(data: {
+    title: string;
+    description: string;
+    contactInfo: any;
+    template?: string;
+    colors?: any;
+  }): Promise<ApiResponse<{ flyerDesign: any; processingTime: number }>> {
+    return this.request('/tools/smartbiz/smart-flyer-designer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async createInvoice(data: {
     invoiceNumber: string;
     businessInfo: any;
@@ -250,8 +263,21 @@ class ApiClient {
     education: any[];
     skills: string[];
     template?: string;
-  }): Promise<ApiResponse<{ resumeData: any; suggestions: string[]; processingTime: number }>> {
+  }): Promise<ApiResponse<{ resume: any; processingTime: number }>> {
     return this.request('/tools/career/resume-builder', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async interviewCoach(data: {
+    jobTitle: string;
+    industry: string;
+    interviewType: 'behavioral' | 'technical' | 'case-study' | 'general';
+    experience?: any[];
+    difficulty?: 'entry' | 'mid' | 'senior' | 'executive';
+  }): Promise<ApiResponse<{ questions: string[]; tips: string[]; preparationChecklist: string[]; processingTime: number }>> {
+    return this.request('/tools/career/interview-coach', {
       method: 'POST',
       body: JSON.stringify(data),
     });
@@ -276,7 +302,7 @@ class ApiClient {
     skills: string[];
     industry: string;
     tone?: string;
-  }): Promise<ApiResponse<{ summary: string; processingTime: number }>> {
+  }): Promise<ApiResponse<{ linkedinSummary: string; sentiment: any; suggestions: string[]; processingTime: number }>> {
     return this.request('/tools/career/linkedin-summary', {
       method: 'POST',
       body: JSON.stringify(data),

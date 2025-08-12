@@ -166,7 +166,16 @@ const SmartBiz = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant="outline" onClick={() => window.location.href = `/tools/smartbiz/${tool.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` }>
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => {
+                      const slug = tool.name === 'Slogan Generator'
+                        ? 'slogan-creator'
+                        : tool.name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+                      window.location.href = `/tools/smartbiz/${slug}`;
+                    }}
+                  >
                     Try Now
                   </Button>
                 </CardContent>

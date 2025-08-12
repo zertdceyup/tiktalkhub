@@ -31,6 +31,13 @@ import BlogSEO from "./pages/tools/BlogSEO";
 import PDF from "./pages/tools/PDF";
 import EmotionalUtility from "./pages/tools/EmotionalUtility";
 import BusinessNameGenerator from "./pages/tools/smartbiz/BusinessNameGenerator";
+import SloganCreator from "./pages/tools/smartbiz/SloganCreator";
+import LogoSketchWizard from "./pages/tools/smartbiz/LogoSketchWizard";
+import SmartFlyerDesigner from "./pages/tools/smartbiz/SmartFlyerDesigner";
+import ResumeBuilder from "./pages/tools/career/ResumeBuilder";
+import CoverLetterAI from "./pages/tools/career/CoverLetterAI";
+import LinkedInSummary from "./pages/tools/career/LinkedInSummary";
+import InterviewCoach from "./pages/tools/career/InterviewCoach";
 
 const queryClient = new QueryClient();
 
@@ -58,7 +65,14 @@ const App = () => (
           {/* Tool Categories */}
           <Route path="/tools/smartbiz" element={<SmartBiz />} />
           <Route path="/tools/smartbiz/business-name-generator" element={<BusinessNameGenerator />} />
+          <Route path="/tools/smartbiz/slogan-creator" element={<SloganCreator />} />
+          <Route path="/tools/smartbiz/logo-sketch-wizard" element={<LogoSketchWizard />} />
+          <Route path="/tools/smartbiz/smart-flyer-designer" element={<SmartFlyerDesigner />} />
           <Route path="/tools/career" element={<Career />} />
+          <Route path="/tools/career/resume-builder" element={<ResumeBuilder />} />
+          <Route path="/tools/career/cover-letter-ai" element={<CoverLetterAI />} />
+          <Route path="/tools/career/linkedin-summary" element={<LinkedInSummary />} />
+          <Route path="/tools/career/interview-coach" element={<InterviewCoach />} />
           <Route path="/tools/video" element={<VideoTools />} />
           <Route path="/tools/social" element={<SocialTools />} />
           <Route path="/tools/general" element={<General />} />
