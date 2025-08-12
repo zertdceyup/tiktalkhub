@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React from 'react';
+
 import { AuthProvider } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import About from "./pages/About";
@@ -45,7 +47,7 @@ import BlogIdeaGenerator from "./pages/tools/content/BlogIdeaGenerator";
 import HeadlineAnalyzer from "./pages/tools/content/HeadlineAnalyzer";
 import CaptionGenerator from "./pages/tools/content/CaptionGenerator";
 import TextToSpeech from "./pages/tools/content/TextToSpeech";
-import VideoTrimmer from "./pages/tools/video/VideoTrimmer";
+const VideoTrimmer = React.lazy(() => import('./pages/tools/video/VideoTrimmer'));
 import ThumbnailSelector from "./pages/tools/video/ThumbnailSelector";
 import GifMaker from "./pages/tools/video/GifMaker";
 import ShortsVerticalCropper from "./pages/tools/video/ShortsVerticalCropper";
@@ -115,7 +117,7 @@ const App = () => (
           <Route path="/tools/career/interview-coach" element={<InterviewCoach />} />
            <Route path="/tools/career/job-match-optimizer" element={<JobMatchOptimizer />} />
           <Route path="/tools/video" element={<VideoTools />} />
-          <Route path="/tools/video/trimmer" element={<VideoTrimmer />} />
+          <Route path="/tools/video/trimmer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><VideoTrimmer /></React.Suspense>} />
           <Route path="/tools/video/thumbnail-selector" element={<ThumbnailSelector />} />
             <Route path="/tools/video/thumbnail-optimizer" element={<ThumbnailOptimizer />} />
             <Route path="/tools/video/gif-maker" element={<GifMaker />} />

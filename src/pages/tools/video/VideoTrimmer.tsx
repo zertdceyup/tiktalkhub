@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { useMutation } from '@tanstack/react-query';
 import api, { getErrorMessage } from '@/lib/api';
 import SEO from '@/components/SEO';
+import Breadcrumbs from '@/components/Breadcrumbs';
 
 const VideoTrimmer: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -30,10 +31,20 @@ const VideoTrimmer: React.FC = () => {
     <div className="min-h-screen">
       <SEO
         title="Video Trimmer | Video Tools | Tiktalkhub"
-        description="Trim video clips quickly with start and end times. Free, fast, and easy."
-        keywords={["video trimmer","cut video","clip video"]}
+        description="Trim videos precisely with FFmpeg-powered processing and instant download."
+        keywords={["video trimmer","cut video","ffmpeg"]}
         canonical="/tools/video/trimmer"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: 'Video Trimmer',
+          applicationCategory: 'MultimediaApplication',
+          operatingSystem: 'Web',
+          url: (typeof window !== 'undefined' ? window.location.href : ''),
+          offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+        }}
       />
+      <Breadcrumbs trail={[{ name: 'Home', href: '/' }, { name: 'Video Tools', href: '/tools/video' }, { name: 'Video Trimmer' }]} jsonLdBaseUrl={typeof window !== 'undefined' ? window.location.origin : ''} />
       <Header />
       <section className="py-12">
         <div className="container mx-auto px-6 max-w-4xl">
@@ -44,8 +55,15 @@ const VideoTrimmer: React.FC = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label>Video file (mp4, webm, mov, avi)</Label>
-                <Input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                <Label>Video file</Label>
+                <div
+                  className="border rounded p-4 text-center hover:bg-secondary/30 cursor-pointer"
+                  onDragOver={(e) => { e.preventDefault(); }}
+                  onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files?.[0]; if (f) setFile(f); }}
+                >
+                  <div>Drag & drop or click to select</div>
+                  <Input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

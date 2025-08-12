@@ -3,6 +3,9 @@ import { body, validationResult } from 'express-validator';
 import logger from '../../utils/logger.js';
 import { generateText, analyzeSentiment, extractKeywords, analyzeReadability } from '../../services/aiService.js';
 import multer from 'multer';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
 
@@ -432,6 +435,37 @@ router.post('/voice-notes-to-text', uploadAudio.single('audio'), [
   } catch (error) {
     logger.error('Voice notes to text error:', error);
     res.status(500).json({ success: false, message: 'Failed to transcribe audio' });
+  }
+});
+
+// Whisper.cpp transcription (real) if enabled
+router.post('/whisper-transcribe', uploadAudio.single('audio'), [ body('language').optional().isString() ], async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No audio file provided' });
+    const bin = process.env.WHISPER_BIN;
+    const model = process.env.WHISPER_MODEL || 'ggml-base.en.bin';
+    if (!bin || !fs.existsSync(bin)) return res.status(400).json({ success: false, message: 'Whisper binary not configured' });
+    const tmpDir = path.join(process.cwd(), 'uploads', 'audio');
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const audioPath = path.join(tmpDir, `${Date.now()}_${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g,'_')}`);
+    fs.writeFileSync(audioPath, req.file.buffer);
+    const args = ['-m', model, '-f', audioPath, '-of', 'json'];
+    const proc = spawn(bin, args);
+    let out = '', err = '';
+    proc.stdout.on('data', d => out += d.toString());
+    proc.stderr.on('data', d => err += d.toString());
+    proc.on('close', code => {
+      if (code !== 0) return res.status(500).json({ success: false, message: 'Whisper failed', error: err });
+      try {
+        const parsed = JSON.parse(out);
+        const text = parsed.text || '';
+        res.json({ success: true, data: { transcript: text, raw: parsed } });
+      } catch (e) {
+        res.status(500).json({ success: false, message: 'Failed to parse whisper output' });
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Transcription failed' });
   }
 });
 
