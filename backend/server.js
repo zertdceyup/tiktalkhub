@@ -24,6 +24,7 @@ import { authenticateToken } from './middleware/auth.js';
 
 // Import database initialization
 import { initializeDatabase, allSQL } from './database/init.js';
+import { startQueue } from './services/queue.js';
 
 // Import logger
 import logger from './utils/logger.js';
@@ -215,6 +216,7 @@ app.listen(PORT, () => {
   logger.info(`🚀 Tiktalkhub Backend Server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV}`);
   logger.info(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
+  startQueue();
 });
 
 export default app;
