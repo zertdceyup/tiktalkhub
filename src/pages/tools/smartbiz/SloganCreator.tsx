@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TikoAI from '@/components/TikoAI';
@@ -11,9 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { Copy, Loader2, RefreshCw, Sparkles, Check, Lightbulb } from 'lucide-react';
+import { Copy, Loader2, RefreshCw, Sparkles, Check, Lightbulb, Star, Download, CopyPlus } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 const defaultKeywords = ['Quality', 'Trusted', 'Pro', 'Smart', 'Innovative', 'Elite'];
+const FAVORITES_KEY = 'tth_slogan_creator_favorites';
 
 const SloganCreator: React.FC = () => {
   const [businessName, setBusinessName] = useState<string>('Acme Labs');
@@ -22,6 +24,21 @@ const SloganCreator: React.FC = () => {
   const [tone, setTone] = useState<string>('professional');
   const [keywordsInput, setKeywordsInput] = useState<string>('');
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [query, setQuery] = useState<string>('');
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(FAVORITES_KEY);
+      if (raw) setFavorites(JSON.parse(raw));
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+    } catch {}
+  }, [favorites]);
 
   const keywords = useMemo(() => {
     const manual = keywordsInput
@@ -54,14 +71,68 @@ const SloganCreator: React.FC = () => {
 
   const handleGenerate = () => mutate();
 
+  const copyText = async (text: string) => {
+    await navigator.clipboard.writeText(text);
+  };
+
   const handleCopy = async (slogan: string, index: number) => {
-    await navigator.clipboard.writeText(slogan);
+    await copyText(slogan);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 1200);
   };
 
+  const filteredSlogans: string[] = useMemo(() => {
+    const list = sloganData?.slogans || [];
+    const q = query.trim().toLowerCase();
+    if (!q) return list;
+    return list.filter((s: string) => s.toLowerCase().includes(q));
+  }, [sloganData, query]);
+
+  const toggleFavorite = (slogan: string) => {
+    setFavorites(prev => prev.includes(slogan) ? prev.filter(s => s !== slogan) : [...prev, slogan]);
+  };
+
+  const exportCSV = () => {
+    const rows = [['Slogan']].concat(filteredSlogans.map(s => [s]));
+    const csv = rows.map(r => r.map(v => `"${(v || '').replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `slogans-${Date.now()}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const copyAll = async () => {
+    await copyText(filteredSlogans.join('\n'));
+  };
+
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Slogan Creator - Tiktalkhub',
+    url: window.location.origin + '/tools/smartbiz/slogan-creator',
+    applicationCategory: 'BusinessApplication',
+    offers: { '@type': 'Offer', price: '0.00', priceCurrency: 'USD' },
+    operatingSystem: 'Any',
+    description: 'Generate memorable slogans tailored to your brand voice and audience, with favorites and export.'
+  };
+
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Slogan Creator | Tiktalkhub"
+        description="Generate 15+ memorable slogans tailored to your brand voice and audience. Save favorites, filter, and export to CSV."
+        keywords={["slogan generator","tagline creator","brand slogans","smartbiz tools"]}
+        canonical="/tools/smartbiz/slogan-creator"
+        openGraph={{ title: 'Slogan Creator | Tiktalkhub', description: 'Create catchy taglines with AI-assisted suggestions', type: 'website', url: window.location.href }}
+        twitter={{ card: 'summary_large_image', title: 'Slogan Creator | Tiktalkhub', description: 'Create catchy taglines with AI-assisted suggestions' }}
+        jsonLd={jsonLd}
+      />
+
       <Header />
 
       <section className="py-16">
@@ -121,21 +192,27 @@ const SloganCreator: React.FC = () => {
                 </div>
               </div>
 
-              <div className="flex gap-3">
-                <Button onClick={handleGenerate} disabled={isPending} className="btn-gold">
-                  {isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="mr-2 h-4 w-4" /> Generate Slogans
-                    </>
-                  )}
-                </Button>
-                <Button variant="outline" onClick={() => setKeywordsInput('')} disabled={isPending}>
-                  <RefreshCw className="mr-2 h-4 w-4" /> Reset
-                </Button>
+              <div className="flex flex-col md:flex-row md:items-end gap-3">
+                <div className="flex-1">
+                  <Label htmlFor="filter">Filter results</Label>
+                  <Input id="filter" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Type to filter results..." />
+                </div>
+                <div className="flex gap-3">
+                  <Button onClick={handleGenerate} disabled={isPending} className="btn-gold">
+                    {isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" /> Generate Slogans
+                      </>
+                    )}
+                  </Button>
+                  <Button variant="outline" onClick={() => setKeywordsInput('')} disabled={isPending}>
+                    <RefreshCw className="mr-2 h-4 w-4" /> Reset
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -143,17 +220,32 @@ const SloganCreator: React.FC = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-6">
               <Card className="tiktok-card">
-                <CardHeader>
-                  <CardTitle>Results</CardTitle>
-                  <CardDescription>
-                    {isPending ? 'Generating suggestions…' : sloganData?.slogans ? `Found ${sloganData.slogans.length} suggestions` : 'Run the generator to see slogans'}
-                  </CardDescription>
+                <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  <div>
+                    <CardTitle>Results</CardTitle>
+                    <CardDescription>
+                      {isPending ? 'Generating suggestions…' : sloganData?.slogans ? `Found ${filteredSlogans.length} suggestions` : 'Run the generator to see slogans'}
+                    </CardDescription>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={copyAll} disabled={!filteredSlogans?.length}>
+                      <CopyPlus className="mr-2 h-4 w-4" /> Copy All
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={exportCSV} disabled={!filteredSlogans?.length}>
+                      <Download className="mr-2 h-4 w-4" /> Export CSV
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <div className="grid sm:grid-cols-2 gap-3">
-                    {sloganData?.slogans?.map((slogan: string, idx: number) => (
-                      <div key={idx} className="flex items-center justify-between rounded-md border p-3">
-                        <span className="font-medium">{slogan}</span>
+                    {filteredSlogans?.map((slogan: string, idx: number) => (
+                      <div key={`${slogan}-${idx}`} className="flex items-center justify-between rounded-md border p-3">
+                        <div className="flex items-center gap-2">
+                          <Button size="icon" variant="ghost" onClick={() => toggleFavorite(slogan)} aria-label="Toggle favorite">
+                            <Star className={`h-4 w-4 ${favorites.includes(slogan) ? 'text-yellow-500 fill-yellow-400' : ''}`} />
+                          </Button>
+                          <span className="font-medium">{slogan}</span>
+                        </div>
                         <Button size="sm" variant="ghost" onClick={() => handleCopy(slogan, idx)}>
                           {copiedIndex === idx ? (
                             <>
@@ -167,6 +259,55 @@ const SloganCreator: React.FC = () => {
                         </Button>
                       </div>
                     ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {favorites.length > 0 && (
+                <Card className="tiktok-card">
+                  <CardHeader>
+                    <CardTitle>Favorites</CardTitle>
+                    <CardDescription>Your saved slogans</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      {favorites.map((s, idx) => (
+                        <div key={`fav-${s}-${idx}`} className="flex items-center justify-between rounded-md border p-3">
+                          <span className="font-medium">{s}</span>
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => copyText(s)}>
+                              <Copy className="mr-1 h-4 w-4" /> Copy
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => toggleFavorite(s)}>
+                              Remove
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card className="tiktok-card">
+                <CardHeader>
+                  <CardTitle>How to Use This Tool</CardTitle>
+                  <CardDescription>Best practices and FAQs</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm text-muted-foreground">
+                  <div>
+                    <p className="font-medium text-foreground">Tips</p>
+                    <ul className="list-disc pl-5 space-y-1 mt-2">
+                      <li>Keep slogans concise and benefit-driven.</li>
+                      <li>Test different tones for audience fit.</li>
+                      <li>Use the filter to shortlist by themes/keywords.</li>
+                      <li>Save favorites and export for team reviews.</li>
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="font-medium text-foreground">FAQs</p>
+                    <p className="mt-2"><span className="text-foreground">How many slogans are generated?</span> Typically 15 per run.</p>
+                    <p className="mt-2"><span className="text-foreground">Can I use them commercially?</span> Verify originality and trademarks before use.</p>
                   </div>
                 </CardContent>
               </Card>
