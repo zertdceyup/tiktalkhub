@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import api, { getErrorMessage } from '@/lib/api';
 import { Download, FileText, Plus, Trash2, Calculator } from 'lucide-react';
+import SEO from '@/components/SEO';
 
 interface InvoiceItem {
   description: string;
@@ -85,6 +86,23 @@ const InvoiceMaker: React.FC = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Invoice Maker | SmartBiz | Tiktalkhub"
+        description="Create professional invoices with tax modes, discounts, currency selection, and instant PDF export. Free online invoice generator."
+        keywords={["invoice maker","free invoice generator","create invoice PDF","invoice with tax","invoice discounts","business invoicing"]}
+        canonical="/tools/smartbiz/invoice-maker"
+        openGraph={{ title: 'Invoice Maker | Tiktalkhub', description: 'Create professional invoices with instant PDF export', type: 'website', url: typeof window !== 'undefined' ? window.location.href : '' }}
+        twitter={{ card: 'summary_large_image', title: 'Invoice Maker | Tiktalkhub', description: 'Create professional invoices with instant PDF export' }}
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'WebApplication',
+          name: 'Invoice Maker - Tiktalkhub',
+          applicationCategory: 'BusinessApplication',
+          operatingSystem: 'Any',
+          url: typeof window !== 'undefined' ? window.location.href : '',
+          offers: { '@type': 'Offer', price: '0.00', priceCurrency: 'USD' }
+        }}
+      />
       <Header />
 
       <section className="py-12">
