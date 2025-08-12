@@ -50,7 +50,7 @@ import CaptionGenerator from "./pages/tools/content/CaptionGenerator";
 import TextToSpeech from "./pages/tools/content/TextToSpeech";
 const VideoTrimmer = React.lazy(() => import('./pages/tools/video/VideoTrimmer'));
 import ThumbnailSelector from "./pages/tools/video/ThumbnailSelector";
-import GifMaker from "./pages/tools/video/GifMaker";
+const GifMaker = React.lazy(() => import('./pages/tools/video/GifMaker'));
 import ShortsVerticalCropper from "./pages/tools/video/ShortsVerticalCropper";
 import NoiseRemover from "./pages/tools/video/NoiseRemover";
 import BatchTrimmer from "./pages/tools/video/BatchTrimmer";
@@ -61,8 +61,8 @@ import ImageRemixer from "./pages/tools/general/ImageRemixer";
 import TwitterThreadPreviewer from "./pages/tools/general/TwitterThreadPreviewer";
 import TextSummarizer from "./pages/tools/content/TextSummarizer";
 import VoiceNotesToText from "./pages/tools/content/VoiceNotesToText";
-import ImageOptimizer from "./pages/tools/utility/ImageOptimizer";
-import PDFMerger from "./pages/tools/utility/PDFMerger";
+const ImageOptimizer = React.lazy(() => import('./pages/tools/utility/ImageOptimizer'));
+const PDFMerger = React.lazy(() => import('./pages/tools/utility/PDFMerger'));
 import TwitterThreadFormatter from "./pages/tools/social/TwitterThreadFormatter";
 import HashtagGenerator from "./pages/tools/social/HashtagGenerator";
 import FacebookCaptionCreator from "./pages/tools/social/FacebookCaptionCreator";
@@ -74,9 +74,9 @@ import MindMirror from "./pages/tools/emotional/MindMirror";
 import Therapet from "./pages/tools/emotional/Therapet";
 import MoodBoardAI from "./pages/tools/emotional/MoodBoardAI";
 import YouTubeThumbnailDownloader from "./pages/tools/utility/YouTubeThumbnailDownloader";
-import PDFSplitter from "./pages/tools/utility/PDFSplitter";
-import PDFPasswordProtector from "./pages/tools/utility/PDFPasswordProtector";
-import PDFToImage from "./pages/tools/utility/PDFToImage";
+const PDFSplitter = React.lazy(() => import('./pages/tools/utility/PDFSplitter'));
+const PDFPasswordProtector = React.lazy(() => import('./pages/tools/utility/PDFPasswordProtector'));
+const PDFToImage = React.lazy(() => import('./pages/tools/utility/PDFToImage'));
 import CaptionOverlay from "./pages/tools/video/CaptionOverlay";
 import TrendingAudio from "./pages/tools/tiktok/TrendingAudio";
 const AdminSettings = React.lazy(() => import('./pages/admin/Settings'));
@@ -124,7 +124,7 @@ const App = () => (
           <Route path="/tools/video/trimmer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><VideoTrimmer /></React.Suspense>} />
           <Route path="/tools/video/thumbnail-selector" element={<ThumbnailSelector />} />
             <Route path="/tools/video/thumbnail-optimizer" element={<ThumbnailOptimizer />} />
-            <Route path="/tools/video/gif-maker" element={<GifMaker />} />
+            <Route path="/tools/video/gif-maker" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><GifMaker /></React.Suspense>} />
             <Route path="/tools/video/batch-trimmer" element={<BatchTrimmer />} />
 <Route path="/tools/video/shorts-vertical-cropper" element={<ShortsVerticalCropper />} />
 <Route path="/tools/video/caption-overlay" element={<CaptionOverlay />} />
@@ -154,12 +154,12 @@ const App = () => (
            <Route path="/tools/general/twitter-thread-previewer" element={<TwitterThreadPreviewer />} />
            <Route path="/tools/content/text-summarizer" element={<TextSummarizer />} />
            <Route path="/tools/content/voice-notes-to-text" element={<VoiceNotesToText />} />
-          <Route path="/tools/utility/image-optimizer" element={<ImageOptimizer />} />
-          <Route path="/tools/utility/pdf-merger" element={<PDFMerger />} />
+          <Route path="/tools/utility/image-optimizer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><ImageOptimizer /></React.Suspense>} />
+          <Route path="/tools/utility/pdf-merger" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><PDFMerger /></React.Suspense>} />
           <Route path="/tools/utility/youtube-thumbnail-downloader" element={<YouTubeThumbnailDownloader />} />
-          <Route path="/tools/utility/pdf-splitter" element={<PDFSplitter />} />
-          <Route path="/tools/utility/pdf-password-protector" element={<PDFPasswordProtector />} />
-          <Route path="/tools/utility/pdf-to-image" element={<PDFToImage />} />
+          <Route path="/tools/utility/pdf-splitter" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><PDFSplitter /></React.Suspense>} />
+          <Route path="/tools/utility/pdf-password-protector" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><PDFPasswordProtector /></React.Suspense>} />
+          <Route path="/tools/utility/pdf-to-image" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><PDFToImage /></React.Suspense>} />
           <Route path="/tools/emotional" element={<EmotionalUtility />} />
           <Route path="/tools/emotional/mindmirror" element={<MindMirror />} />
           <Route path="/tools/emotional/therapet" element={<Therapet />} />

@@ -108,13 +108,20 @@ const SocialTools = () => {
   ];
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-  const jsonLd = {
-    '@context': 'https://schema.org',
+  const collection = {
     '@type': 'CollectionPage',
     name: 'Social Media Tools',
     url: typeof window !== 'undefined' ? window.location.href : '',
     hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'SocialNetworkingApplication', operatingSystem: 'Web', url: `${baseUrl}${t.route}` }))
   };
+  const articles = blogPosts.map((p) => ({
+    '@type': 'Article',
+    headline: p.title,
+    description: p.excerpt,
+    author: { '@type': 'Organization', name: 'Tiktalkhub' },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': typeof window !== 'undefined' ? window.location.href : '' }
+  }));
+  const jsonLd = { '@context': 'https://schema.org', '@graph': [collection, ...articles] };
 
   return (
     <div className="min-h-screen">
