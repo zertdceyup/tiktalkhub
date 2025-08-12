@@ -44,6 +44,12 @@ import BlogIdeaGenerator from "./pages/tools/content/BlogIdeaGenerator";
 import HeadlineAnalyzer from "./pages/tools/content/HeadlineAnalyzer";
 import CaptionGenerator from "./pages/tools/content/CaptionGenerator";
 import TextToSpeech from "./pages/tools/content/TextToSpeech";
+import VideoTrimmer from "./pages/tools/video/VideoTrimmer";
+import ThumbnailSelector from "./pages/tools/video/ThumbnailSelector";
+import GifMaker from "./pages/tools/video/GifMaker";
+import QRCodeGenerator from "./pages/tools/utility/QRCodeGenerator";
+import ImageOptimizer from "./pages/tools/utility/ImageOptimizer";
+import PDFMerger from "./pages/tools/utility/PDFMerger";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +88,9 @@ const App = () => (
           <Route path="/tools/career/linkedin-summary" element={<LinkedInSummary />} />
           <Route path="/tools/career/interview-coach" element={<InterviewCoach />} />
           <Route path="/tools/video" element={<VideoTools />} />
+          <Route path="/tools/video/trimmer" element={<VideoTrimmer />} />
+          <Route path="/tools/video/thumbnail-selector" element={<ThumbnailSelector />} />
+          <Route path="/tools/video/gif-maker" element={<GifMaker />} />
           <Route path="/tools/social" element={<SocialTools />} />
           <Route path="/tools/general" element={<General />} />
           <Route path="/tools/text-tools" element={<TextTools />} />
@@ -93,6 +102,9 @@ const App = () => (
           <Route path="/tools/content/caption-generator" element={<CaptionGenerator />} />
           <Route path="/tools/content/text-to-speech" element={<TextToSpeech />} />
           <Route path="/tools/pdf" element={<PDF />} />
+          <Route path="/tools/utility/qr-code-generator" element={<QRCodeGenerator />} />
+          <Route path="/tools/utility/image-optimizer" element={<ImageOptimizer />} />
+          <Route path="/tools/utility/pdf-merger" element={<PDFMerger />} />
           <Route path="/tools/emotional" element={<EmotionalUtility />} />
           
           <Route path="*" element={<NotFound />} />
