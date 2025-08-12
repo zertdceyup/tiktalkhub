@@ -30,6 +30,7 @@ import AICreator from "./pages/tools/AICreator";
 import BlogSEO from "./pages/tools/BlogSEO";
 import PDF from "./pages/tools/PDF";
 import EmotionalUtility from "./pages/tools/EmotionalUtility";
+import BusinessNameGenerator from "./pages/tools/smartbiz/BusinessNameGenerator";
 
 const queryClient = new QueryClient();
 
@@ -56,6 +57,7 @@ const App = () => (
           
           {/* Tool Categories */}
           <Route path="/tools/smartbiz" element={<SmartBiz />} />
+          <Route path="/tools/smartbiz/business-name-generator" element={<BusinessNameGenerator />} />
           <Route path="/tools/career" element={<Career />} />
           <Route path="/tools/video" element={<VideoTools />} />
           <Route path="/tools/social" element={<SocialTools />} />

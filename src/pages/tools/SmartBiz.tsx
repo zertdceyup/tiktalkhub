@@ -166,7 +166,7 @@ const SmartBiz = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant="outline">
+                  <Button className="w-full" variant="outline" onClick={() => window.location.href = `/tools/smartbiz/${tool.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}` }>
                     Try Now
                   </Button>
                 </CardContent>
