@@ -382,6 +382,17 @@ class ApiClient {
     });
   }
 
+  async whisperTranscribe(data: { file: File; language?: string }): Promise<ApiResponse<{ transcript: string; raw: any }>> {
+    const formData = new FormData();
+    formData.append('audio', data.file);
+    if (data.language) formData.append('language', data.language);
+    return this.request('/tools/content/whisper-transcribe', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async tts(data: { text: string; voice?: string; speed?: number; language?: string }): Promise<ApiResponse<{ audioUrl: string; settings: any; processingTime: number }>> {
+    return this.request('/tools/content/tts', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // Video tools
   async trimVideo(data: {
     file: File;

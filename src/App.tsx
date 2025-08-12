@@ -79,6 +79,7 @@ import PDFPasswordProtector from "./pages/tools/utility/PDFPasswordProtector";
 import PDFToImage from "./pages/tools/utility/PDFToImage";
 import CaptionOverlay from "./pages/tools/video/CaptionOverlay";
 import TrendingAudio from "./pages/tools/tiktok/TrendingAudio";
+const AdminSettings = React.lazy(() => import('./pages/admin/Settings'));
 
 const queryClient = new QueryClient();
 
@@ -103,6 +104,7 @@ const App = () => (
           <Route path="/case-studies" element={<CaseStudies />} />
           <Route path="/help" element={<HelpCenter />} />
           <Route path="/careers" element={<Careers />} />
+          <Route path="/admin/settings" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminSettings /></React.Suspense>} />
           
           {/* Tool Categories */}
           <Route path="/tools/smartbiz" element={<SmartBiz />} />

@@ -10,6 +10,8 @@ import {
   Hash, Twitter, Instagram, Link, 
   QrCode, PenTool, ArrowRight, TrendingUp 
 } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import AdSlot from '@/components/AdSlot';
 
 const SocialTools = () => {
   const tools = [
@@ -105,6 +107,15 @@ const SocialTools = () => {
     }
   ];
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Social Media Tools',
+    url: typeof window !== 'undefined' ? window.location.href : '',
+    hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'SocialNetworkingApplication', operatingSystem: 'Web', url: `${baseUrl}${t.route}` }))
+  };
+
   return (
     <div className="min-h-screen">
       <SEO
@@ -112,33 +123,32 @@ const SocialTools = () => {
         description="Hashtag generator, Twitter thread formatter, Facebook captions and more for social growth."
         keywords={["hashtag generator","twitter thread formatter","facebook caption","social media tools"]}
         canonical="/tools/social"
+        jsonLd={jsonLd}
       />
       <Header />
-      
+      <div className="container mx-auto px-6">
+        <Breadcrumbs trail={[{ name: 'Home', href: '/' }, { name: 'Social Tools' }]} jsonLdBaseUrl={baseUrl} />
+      </div>
       {/* Hero Section */}
       <section className="py-20 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/95">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(255,20,147,0.1),transparent_50%)]" />
         </div>
-        
         <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <Badge className="mb-6 bg-gradient-to-r from-magic-pink/20 to-primary/20 text-magic-pink border-magic-pink/30">
               <Hash className="w-4 h-4 mr-2" />
               Social Toolkit
             </Badge>
-            
             <h1 className="text-4xl lg:text-6xl font-bold mb-6">
               <span className="bg-gradient-to-r from-magic-pink via-primary to-gold-bright bg-clip-text text-transparent">
                 Social Toolkit
               </span>
             </h1>
-            
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               Supercharge your social media presence with AI-powered tools. Create engaging content, 
               optimize for algorithms, and grow your audience across all platforms.
             </p>
-            
             <Button size="lg" className="btn-gold">
               Boost Your Social Presence
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -146,7 +156,10 @@ const SocialTools = () => {
           </div>
         </div>
       </section>
-
+      {/* Ad Slot */}
+      <div className="container mx-auto px-6">
+        <AdSlot id="ad-social-top" height={120} className="mb-8" />
+      </div>
       {/* Tools Grid */}
       <section className="py-20">
         <div className="container mx-auto px-6">
@@ -188,7 +201,6 @@ const SocialTools = () => {
           </div>
         </div>
       </section>
-
       {/* Blog Section */}
       <section className="py-20 bg-secondary/30">
         <div className="container mx-auto px-6">
@@ -198,7 +210,6 @@ const SocialTools = () => {
             </h2>
             <p className="text-muted-foreground">Expert strategies to dominate social media</p>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {blogPosts.map((post) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer">
@@ -225,7 +236,6 @@ const SocialTools = () => {
           </div>
         </div>
       </section>
-
       <Footer />
       <TikoAI />
     </div>
