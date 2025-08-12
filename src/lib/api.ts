@@ -413,6 +413,27 @@ class ApiClient {
     });
   }
 
+  async createGif(data: {
+    file: File;
+    startTime?: number;
+    duration?: number;
+    quality?: 'low' | 'medium' | 'high';
+    fps?: number;
+  }): Promise<ApiResponse<{ gif: any; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.startTime !== undefined) formData.append('startTime', String(data.startTime));
+    if (data.duration !== undefined) formData.append('duration', String(data.duration));
+    if (data.quality) formData.append('quality', data.quality);
+    if (data.fps !== undefined) formData.append('fps', String(data.fps));
+
+    return this.request('/tools/video/gif-maker', {
+      method: 'POST',
+      body: formData,
+      headers: {},
+    });
+  }
+
   // Social tools
   async generateHashtags(data: {
     content: string;
