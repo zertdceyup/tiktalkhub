@@ -792,6 +792,15 @@ class ApiClient {
       method: 'DELETE',
     });
   }
+
+  async batchTrimVideos(data: { files: File[]; startTime: number; endTime: number; outputFormat?: 'mp4'|'webm'|'mov' }): Promise<ApiResponse<{ items: any[]; processingTime: number }>> {
+    const formData = new FormData();
+    data.files.forEach((f) => formData.append('videos', f));
+    formData.append('startTime', String(data.startTime));
+    formData.append('endTime', String(data.endTime));
+    if (data.outputFormat) formData.append('outputFormat', data.outputFormat);
+    return this.request('/tools/video/batch-trimmer', { method: 'POST', body: formData, headers: {} });
+  }
 }
 
 // Create and export API client instance

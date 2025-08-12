@@ -444,6 +444,61 @@ router.post('/noise-remover', upload.single('video'), [
   }
 });
 
+router.post('/batch-trimmer', upload.array('videos', 10), [
+  body('startTime').isFloat({ min: 0 }),
+  body('endTime').isFloat({ min: 0 }),
+  body('outputFormat').optional().isIn(['mp4','webm','mov'])
+], async (req, res) => {
+  const started = Date.now();
+  try {
+    const files = req.files as Express.Multer.File[] | undefined;
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No video files provided' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { startTime: trimStart, endTime: trimEnd, outputFormat = 'mp4' } = req.body;
+    const originalDuration = 120; // mock
+    const trimmedDuration = trimEnd - trimStart;
+
+    const results = files.map((f, i) => ({
+      id: i + 1,
+      original: { name: f.originalname, size: f.size, duration: originalDuration },
+      trimmed: {
+        url: `/api/video/batch-trimmed-${Date.now()}-${i}.${outputFormat}`,
+        format: outputFormat,
+        duration: trimmedDuration,
+        startTime: Number(trimStart),
+        endTime: Number(trimEnd),
+        estimatedSize: Math.floor(f.size * (trimmedDuration / originalDuration))
+      }
+    }));
+
+    const processingTime = Date.now() - started;
+
+    if (req.trackUsage) {
+      req.trackUsage(
+        'batch-trimmer',
+        req.user?.id,
+        req.ip,
+        req.get('User-Agent'),
+        { fileCount: files.length, outputFormat, duration: trimmedDuration },
+        { totalEstimated: results.reduce((s, r) => s + r.trimmed.estimatedSize, 0) },
+        processingTime
+      );
+    }
+
+    res.json({ success: true, data: { items: results, processingTime, note: 'Demo implementation. In production, each video would be trimmed.' } });
+  } catch (error) {
+    logger.error('Batch trimmer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to batch trim videos' });
+  }
+});
+
 function formatSrtTime(seconds) {
   const s = Number(seconds) || 0;
   const hh = String(Math.floor(s / 3600)).padStart(2, '0');
