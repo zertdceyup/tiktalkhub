@@ -467,9 +467,11 @@ class ApiClient {
   async generateQRCode(data: {
     text: string;
     size?: number;
-    format?: string;
-    errorCorrection?: string;
-  }): Promise<ApiResponse<{ qrCodeUrl: string; processingTime: number }>> {
+    format?: 'png' | 'svg';
+    errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H';
+    color?: string;
+    backgroundColor?: string;
+  }): Promise<ApiResponse<{ qrCode: string; format: string; size: number; processingTime: number }>> {
     return this.request('/tools/utility/qr-generator', {
       method: 'POST',
       body: JSON.stringify(data),
