@@ -328,6 +328,10 @@ class ApiClient {
     });
   }
 
+  async jobMatchOptimizer(data: { jobDescription: string; resume: string }): Promise<ApiResponse<{ atsScore: number; jobKeywords: string[]; resumeKeywords: string[]; overlap: string[]; missing: string[]; suggestions: string[]; optimizedSummary: string; processingTime: number }>> {
+    return this.request('/tools/career/job-match-optimizer', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // Content tools
   async generateBlogIdeas(data: {
     niche: string;

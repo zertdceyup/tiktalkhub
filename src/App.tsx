@@ -40,6 +40,7 @@ import ResumeBuilder from "./pages/tools/career/ResumeBuilder";
 import CoverLetterAI from "./pages/tools/career/CoverLetterAI";
 import LinkedInSummary from "./pages/tools/career/LinkedInSummary";
 import InterviewCoach from "./pages/tools/career/InterviewCoach";
+import JobMatchOptimizer from "./pages/tools/career/JobMatchOptimizer";
 import BlogIdeaGenerator from "./pages/tools/content/BlogIdeaGenerator";
 import HeadlineAnalyzer from "./pages/tools/content/HeadlineAnalyzer";
 import CaptionGenerator from "./pages/tools/content/CaptionGenerator";
@@ -112,6 +113,7 @@ const App = () => (
           <Route path="/tools/career/cover-letter-ai" element={<CoverLetterAI />} />
           <Route path="/tools/career/linkedin-summary" element={<LinkedInSummary />} />
           <Route path="/tools/career/interview-coach" element={<InterviewCoach />} />
+           <Route path="/tools/career/job-match-optimizer" element={<JobMatchOptimizer />} />
           <Route path="/tools/video" element={<VideoTools />} />
           <Route path="/tools/video/trimmer" element={<VideoTrimmer />} />
           <Route path="/tools/video/thumbnail-selector" element={<ThumbnailSelector />} />

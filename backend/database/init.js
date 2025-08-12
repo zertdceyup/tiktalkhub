@@ -319,6 +319,7 @@ export const initializeDatabase = async () => {
       { name: 'Cover Letter AI', slug: 'cover-letter-ai', category: 'career', description: 'AI-powered cover letters', icon: '✉️' },
       { name: 'LinkedIn Summary Generator', slug: 'linkedin-summary', category: 'career', description: 'Create LinkedIn summaries', icon: '💼' },
       { name: 'Interview Coach', slug: 'interview-coach', category: 'career', description: 'Practice interviews with AI', icon: '🎤' },
+      { name: 'Job Match + Resume Optimizer', slug: 'job-match-optimizer', category: 'career', description: 'Analyze JD vs resume and optimize', icon: '🎯' },
 
       // Content Tools
       { name: 'Blog Idea Generator', slug: 'blog-idea-generator', category: 'content', description: 'Generate blog post ideas', icon: '💭' },

@@ -1,7 +1,7 @@
 import express from 'express';
 import { body, validationResult } from 'express-validator';
 import logger from '../../utils/logger.js';
-import { generateText, analyzeSentiment } from '../../services/aiService.js';
+import { generateText, analyzeSentiment, extractKeywords } from '../../services/aiService.js';
 
 const router = express.Router();
 
@@ -401,6 +401,69 @@ router.post('/interview-coach', [
       success: false,
       message: 'Failed to generate interview coaching'
     });
+  }
+});
+
+// Job Match Scraper + Resume Optimizer (mock)
+router.post('/job-match-optimizer', [
+  body('jobDescription').isLength({ min: 50 }),
+  body('resume').isLength({ min: 50 })
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+
+    const { jobDescription, resume } = req.body;
+
+    // Extract keywords and compute overlap
+    const jobKeywords = extractKeywords(jobDescription, 20);
+    const resumeKeywords = extractKeywords(resume, 20);
+
+    const overlap = jobKeywords.filter(k => resumeKeywords.includes(k));
+    const missing = jobKeywords.filter(k => !resumeKeywords.includes(k));
+
+    // Basic ATS score heuristic
+    const coverage = overlap.length / Math.max(1, jobKeywords.length);
+    const lengthPenalty = Math.max(0, Math.min(0.1, (resume.length - 4000) / 20000));
+    const atsScore = Math.round((coverage * 0.8 + (1 - lengthPenalty) * 0.2) * 100);
+
+    // Suggestions
+    const suggestions = [
+      missing.length > 0 ? `Add these keywords if relevant: ${missing.slice(0, 8).join(', ')}` : 'Your resume covers the main keywords in the JD.',
+      'Use quantifiable achievements with metrics (%, $, #).',
+      'Align your job titles and section headings with the job description terminology.',
+      'Ensure consistent formatting and avoid graphics that ATS may not parse.'
+    ];
+
+    // Optional AI-improved summary/bullets
+    let optimizedSummary = '';
+    if (process.env.ENABLE_LOCAL_AI === 'true') {
+      try {
+        const prompt = `Given this job description and resume, write a 3-sentence professional summary tailored to the role.\nJD:\n${jobDescription}\n\nResume:\n${resume}`;
+        optimizedSummary = await generateText(prompt) || '';
+      } catch (e) {}
+    }
+    if (!optimizedSummary) {
+      optimizedSummary = 'Results-driven professional aligning experience with the role requirements. Proven impact through quantifiable achievements and strong collaboration. Adept at mastering tools and delivering outcomes.';
+    }
+
+    const result = {
+      atsScore,
+      jobKeywords,
+      resumeKeywords,
+      overlap,
+      missing,
+      suggestions,
+      optimizedSummary
+    };
+
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('job-match-optimizer', req.user?.id, req.ip, req.get('User-Agent'), { jdLength: jobDescription.length, resumeLength: resume.length }, { atsScore, missingCount: missing.length }, processingTime);
+    res.json({ success: true, data: { ...result, processingTime } });
+  } catch (error) {
+    logger.error('Job match optimizer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to optimize resume for job match' });
   }
 });
 

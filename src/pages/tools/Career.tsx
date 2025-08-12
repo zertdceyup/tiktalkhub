@@ -35,13 +35,21 @@ const Career = () => {
       href: "/tools/career/linkedin-summary",
       popular: true
     },
-    {
-      name: "Interview Coach",
-      description: "Practice interviews with timed sessions and tips",
-      icon: Mic,
-      features: ["Question bank", "STAR assistant", "Progress tracking"],
-      href: "/tools/career/interview-coach"
-    }
+          {
+        name: "Interview Coach",
+        description: "Practice interviews with timed sessions and tips",
+        icon: Mic,
+        features: ["Question bank", "STAR assistant", "Progress tracking"],
+        href: "/tools/career/interview-coach"
+      },
+      {
+        name: "Job Match + Resume Optimizer",
+        description: "Analyze JD vs resume; get ATS score and keyword gaps",
+        icon: Target,
+        features: ["ATS score", "Missing keywords", "Optimized summary"],
+        href: "/tools/career/job-match-optimizer",
+        popular: true
+      }
   ];
 
   const blogPosts = [
