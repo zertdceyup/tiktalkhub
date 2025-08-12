@@ -478,6 +478,15 @@ class ApiClient {
     return this.request('/tools/video/shorts-vertical-cropper', { method: 'POST', body: formData, headers: {} });
   }
 
+  async removeNoise(data: { file: File; mode?: 'mild'|'moderate'|'aggressive'; humHz?: number; dereverb?: boolean }): Promise<ApiResponse<{ output: { url: string; settings: any; stats: any }; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.mode) formData.append('mode', data.mode);
+    if (data.humHz !== undefined) formData.append('humHz', String(data.humHz));
+    if (data.dereverb !== undefined) formData.append('dereverb', String(data.dereverb));
+    return this.request('/tools/video/noise-remover', { method: 'POST', body: formData, headers: {} });
+  }
+  
   // Social tools
   async generateHashtags(data: {
     content: string;

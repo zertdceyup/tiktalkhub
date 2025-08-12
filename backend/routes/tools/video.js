@@ -384,6 +384,66 @@ router.post('/shorts-vertical-cropper', upload.single('video'), [
   }
 });
 
+router.post('/noise-remover', upload.single('video'), [
+  body('mode').optional().isIn(['mild','moderate','aggressive']),
+  body('humHz').optional().isFloat({ min: 20, max: 20000 }),
+  body('dereverb').optional().isBoolean(),
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file provided' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const mode = req.body.mode || 'moderate';
+    const humHz = req.body.humHz ? Number(req.body.humHz) : null;
+    const dereverb = req.body.dereverb === 'true' || req.body.dereverb === true;
+
+    // Mock stats
+    const baselineNoiseDb =  -32; // dBFS
+    const reductionDb = mode === 'aggressive' ? 12 : mode === 'moderate' ? 8 : 4;
+    const postNoiseDb = baselineNoiseDb - reductionDb;
+    const humRemoved = Boolean(humHz);
+    const dereverbApplied = dereverb;
+
+    const output = {
+      url: `/api/video/noise-removed-${Date.now()}.mp4`,
+      settings: { mode, humHz, dereverb },
+      stats: {
+        baselineNoiseDb,
+        reductionDb,
+        postNoiseDb,
+        humRemoved,
+        dereverbApplied
+      }
+    };
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage(
+        'noise-remover',
+        req.user?.id,
+        req.ip,
+        req.get('User-Agent'),
+        { size: req.file.size, mode, humHz, dereverb },
+        { reductionDb },
+        processingTime
+      );
+    }
+
+    res.json({ success: true, data: { output, processingTime, note: 'Demo implementation. In production, spectral denoise and hum notch filtering would run.' } });
+  } catch (error) {
+    logger.error('Noise remover error:', error);
+    res.status(500).json({ success: false, message: 'Failed to remove noise' });
+  }
+});
+
 function formatSrtTime(seconds) {
   const s = Number(seconds) || 0;
   const hh = String(Math.floor(s / 3600)).padStart(2, '0');

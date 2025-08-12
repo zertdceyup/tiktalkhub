@@ -37,7 +37,8 @@ const VideoTools = () => {
       name: "Noise Remover",
       description: "Clean audio with AI noise reduction",
       icon: Volume2,
-      features: ["Background noise removal", "Echo cancellation", "Voice enhancement"]
+      features: ["Background noise removal", "Echo cancellation", "Voice enhancement"],
+      popular: false
     },
     {
       name: "Shorts Vertical Cropper",
