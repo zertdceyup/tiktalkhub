@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import React from 'react';
 
 import { AuthProvider } from "@/contexts/AuthContext";
+import CMPBanner from "@/components/CMPBanner";
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
@@ -87,7 +88,8 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+                 <BrowserRouter>
+           <CMPBanner />
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/about" element={<About />} />

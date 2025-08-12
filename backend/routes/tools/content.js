@@ -469,6 +469,39 @@ router.post('/whisper-transcribe', uploadAudio.single('audio'), [ body('language
   }
 });
 
+// Coqui/Tortoise TTS integration (real) if enabled
+router.post('/tts', [
+  body('text').isLength({ min: 1 }),
+  body('voice').optional().isString(),
+  body('speed').optional().isFloat({ min: 0.5, max: 2.0 }),
+  body('language').optional().isString()
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { text, voice = process.env.TTS_VOICE || 'en_US', speed = 1.0, language = 'en' } = req.body;
+    const bin = process.env.TTS_BIN;
+    if (!bin || !fs.existsSync(bin)) return res.status(400).json({ success: false, message: 'TTS binary not configured' });
+    const outDir = path.join(process.cwd(), 'uploads', 'audio');
+    fs.mkdirSync(outDir, { recursive: true });
+    const outPath = path.join(outDir, `tts_${Date.now()}.wav`);
+    // Example CLI args; adjust per your TTS engine
+    // Expecting: tts --text "..." --out_path out.wav --voice VOICE --lang en --speed 1.0
+    const args = [ '--text', text, '--out_path', outPath, '--voice', voice, '--lang', language, '--speed', String(speed) ];
+    const proc = spawn(bin, args, { env: process.env });
+    let err = '';
+    proc.stderr.on('data', d => err += d.toString());
+    proc.on('close', code => {
+      if (code !== 0) return res.status(500).json({ success: false, message: 'TTS generation failed', error: err });
+      const processingTime = Date.now() - start;
+      res.json({ success: true, data: { audioUrl: `/uploads/audio/${path.basename(outPath)}`, settings: { voice, speed, language }, processingTime } });
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'TTS failed' });
+  }
+});
+
 // Helper functions
 const generateTemplateBlogIdeas = (niche, contentType, targetAudience, keywords, count) => {
   const templates = {
