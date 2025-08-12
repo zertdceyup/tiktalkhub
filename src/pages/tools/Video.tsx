@@ -10,6 +10,8 @@ import {
   Video, Scissors, ImageIcon, Volume2, 
   Crop, Download, ArrowRight, TrendingUp 
 } from 'lucide-react';
+import Breadcrumbs from '@/components/Breadcrumbs';
+import AdSlot from '@/components/AdSlot';
 
 const VideoTools = () => {
   const tools = [
@@ -106,6 +108,15 @@ const VideoTools = () => {
     }
   ];
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'Video Tools Suite',
+    url: typeof window !== 'undefined' ? window.location.href : '',
+    hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'MultimediaApplication', operatingSystem: 'Web', url: `${baseUrl}${t.route}` }))
+  };
+
   return (
     <div className="min-h-screen">
       <SEO
@@ -115,33 +126,32 @@ const VideoTools = () => {
         canonical="/tools/video"
         openGraph={{ title: 'Video Tools Suite | Tiktalkhub', description: 'Trim, extract, and create with fast online tools', type: 'website', url: typeof window !== 'undefined' ? window.location.href : '' }}
         twitter={{ card: 'summary_large_image', title: 'Video Tools Suite | Tiktalkhub', description: 'Trim, extract, and create with fast online tools' }}
+        jsonLd={jsonLd}
       />
       <Header />
-      
+      <div className="container mx-auto px-6">
+        <Breadcrumbs trail={[{ name: 'Home', href: '/' }, { name: 'Video Tools' }]} jsonLdBaseUrl={baseUrl} />
+      </div>
       {/* Hero Section */}
       <section className="py-20 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-background via-background to-background/95">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_40%,rgba(138,43,226,0.1),transparent_50%)]" />
         </div>
-        
         <div className="container mx-auto px-6 relative z-10">
           <div className="max-w-4xl mx-auto text-center">
             <Badge className="mb-6 bg-gradient-to-r from-neon-purple/20 to-primary/20 text-neon-purple border-neon-purple/30">
               <Video className="w-4 h-4 mr-2" />
               Video Toolkit
             </Badge>
-            
             <h1 className="text-4xl lg:text-6xl font-bold mb-6">
               <span className="bg-gradient-to-r from-neon-purple via-primary to-gold-bright bg-clip-text text-transparent">
                 Video Toolkit
               </span>
             </h1>
-            
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               Professional video editing tools powered by AI. Create, edit, and optimize 
               your videos for maximum impact across all platforms.
             </p>
-            
             <Button size="lg" className="btn-gold">
               Start Creating Videos
               <ArrowRight className="ml-2 h-5 w-5" />
@@ -150,10 +160,15 @@ const VideoTools = () => {
         </div>
       </section>
 
+      {/* Ad Slot */}
+      <div className="container mx-auto px-6">
+        <AdSlot id="ad-video-top" height={120} className="mb-8" />
+      </div>
+
       {/* Tools Grid */}
       <section className="py-20">
         <div className="container mx-auto px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg-grid-cols-3 lg:grid-cols-3 gap-8">
             {tools.map((tool, index) => (
               <Card key={tool.name} className="tiktok-card group cursor-pointer">
                 <CardHeader>
@@ -201,7 +216,6 @@ const VideoTools = () => {
             </h2>
             <p className="text-muted-foreground">Master video creation with expert tips and strategies</p>
           </div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {blogPosts.map((post) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer">
