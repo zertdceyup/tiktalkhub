@@ -229,6 +229,19 @@ class ApiClient {
     });
   }
 
+  async generateFlyerDesign(data: {
+    title: string;
+    description: string;
+    contactInfo: any;
+    template?: string;
+    colors?: any;
+  }): Promise<ApiResponse<{ flyerDesign: any; processingTime: number }>> {
+    return this.request('/tools/smartbiz/smart-flyer-designer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   async createInvoice(data: {
     invoiceNumber: string;
     businessInfo: any;
@@ -289,7 +302,7 @@ class ApiClient {
     skills: string[];
     industry: string;
     tone?: string;
-  }): Promise<ApiResponse<{ summary: string; processingTime: number }>> {
+  }): Promise<ApiResponse<{ linkedinSummary: string; sentiment: any; suggestions: string[]; processingTime: number }>> {
     return this.request('/tools/career/linkedin-summary', {
       method: 'POST',
       body: JSON.stringify(data),

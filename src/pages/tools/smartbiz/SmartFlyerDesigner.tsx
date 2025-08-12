@@ -32,17 +32,14 @@ const SmartFlyerDesigner: React.FC = () => {
 
   const { mutate, data: result, isPending } = useMutation({
     mutationFn: async () => {
-      const res = await api.request('/tools/smartbiz/smart-flyer-designer', {
-        method: 'POST',
-        body: JSON.stringify({
-          title,
-          description,
-          contactInfo: { phone, email },
-          template,
-          colors: { primary, secondary, accent, background }
-        })
-      } as any);
-      return (res as any).data;
+      const res = await api.generateFlyerDesign({
+        title,
+        description,
+        contactInfo: { phone, email },
+        template,
+        colors: { primary, secondary, accent, background }
+      });
+      return res.data;
     }
   });
 
