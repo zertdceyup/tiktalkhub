@@ -264,6 +264,77 @@ export const initializeDatabase = async () => {
       )
     `);
 
+    // Jobs queue
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        payload TEXT,
+        result TEXT,
+        retries INTEGER DEFAULT 0,
+        max_retries INTEGER DEFAULT 3,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Pipelines
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS pipelines (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        schema_json TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT 1,
+        created_by INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users (id)
+      )
+    `);
+
+    // Pipeline runs
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS pipeline_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pipeline_id INTEGER NOT NULL,
+        project_id INTEGER,
+        status TEXT DEFAULT 'queued',
+        log TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (pipeline_id) REFERENCES pipelines (id),
+        FOREIGN KEY (project_id) REFERENCES projects (id)
+      )
+    `);
+
+    // Projects
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        name TEXT NOT NULL,
+        data_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // Page blocks (block-based editor)
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS page_blocks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_path TEXT NOT NULL,
+        position INTEGER DEFAULT 0,
+        block_type TEXT NOT NULL,
+        config_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create indexes for better performance
     await runSQL('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
     await runSQL('CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug)');
@@ -305,6 +376,10 @@ export const initializeDatabase = async () => {
       { key: 'posts_per_page', value: '10', type: 'number', category: 'blog', description: 'Blog posts per page' },
       { key: 'adsense_code', value: '', category: 'monetization', description: 'Google AdSense code' },
       { key: 'analytics_code', value: '', category: 'analytics', description: 'Google Analytics code' },
+      { key: 'posts_home_count', value: '9', type: 'number', category: 'blog', description: 'Homepage posts count' },
+      { key: 'posts_sidebar_count', value: '6', type: 'number', category: 'blog', description: 'Sidebar posts count on tools' },
+      { key: 'ad_header_code', value: '', category: 'monetization', description: 'Header ad/script injection' },
+      { key: 'ad_footer_code', value: '', category: 'monetization', description: 'Footer ad/script injection' },
       // New AI/TTS/ASR/Tiko settings
       { key: 'enable_local_ai', value: 'true', type: 'boolean', category: 'ai', description: 'Use local AI engines' },
       { key: 'ai_model_path', value: '', category: 'ai', description: 'Local AI model path' },
