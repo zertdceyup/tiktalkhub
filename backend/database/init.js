@@ -312,6 +312,7 @@ export const initializeDatabase = async () => {
       { name: 'Logo Sketch Wizard', slug: 'logo-sketch-wizard', category: 'smartbiz', description: 'Design logo concepts', icon: '🎨' },
       { name: 'Smart Flyer Designer', slug: 'smart-flyer-designer', category: 'smartbiz', description: 'Create professional flyers', icon: '📄' },
       { name: 'Invoice Maker', slug: 'invoice-maker', category: 'smartbiz', description: 'Generate professional invoices', icon: '📋' },
+      { name: 'Business Plan Generator', slug: 'business-plan-generator', category: 'smartbiz', description: 'Generate complete business plans', icon: '🧭' },
 
       // Career Tools
       { name: 'Resume Builder', slug: 'resume-builder', category: 'career', description: 'Build professional resumes', icon: '📝' },

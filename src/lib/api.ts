@@ -256,6 +256,25 @@ class ApiClient {
     });
   }
 
+  async generateBusinessPlan(data: {
+    businessName: string;
+    industry: string;
+    targetMarket: string;
+    tone?: 'professional' | 'friendly' | 'concise' | 'visionary';
+    length?: 'short' | 'medium' | 'long';
+    problem?: string;
+    solution?: string;
+    revenueStreams?: string[];
+    channels?: string[];
+    costStructure?: string[];
+    generatePDF?: boolean;
+  }): Promise<ApiResponse<{ plan: any; pdfUrl?: string; processingTime: number }>> {
+    return this.request('/tools/smartbiz/business-plan-generator', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Career tools
   async buildResume(data: {
     personalInfo: any;

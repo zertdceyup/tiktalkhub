@@ -474,6 +474,91 @@ router.post('/invoice-maker', [
   }
 });
 
+// Business Plan Generator
+router.post('/business-plan-generator', [
+  body('businessName').isLength({ min: 1, max: 100 }),
+  body('industry').isLength({ min: 1, max: 100 }),
+  body('targetMarket').isLength({ min: 1, max: 200 }),
+  body('tone').optional().isIn(['professional','friendly','concise','visionary']),
+  body('length').optional().isIn(['short','medium','long']),
+  body('problem').optional().isLength({ max: 500 }),
+  body('solution').optional().isLength({ max: 500 }),
+  body('revenueStreams').optional().isArray(),
+  body('channels').optional().isArray(),
+  body('costStructure').optional().isArray(),
+  body('generatePDF').optional().isBoolean()
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success:false, message:'Validation errors', errors: errors.array() });
+    }
+
+    const {
+      businessName,
+      industry,
+      targetMarket,
+      tone = 'professional',
+      length = 'medium',
+      problem = '',
+      solution = '',
+      revenueStreams = [],
+      channels = [],
+      costStructure = []
+    } = req.body;
+
+    // Build prompt if local AI enabled
+    let generatedSections = null;
+    if (process.env.ENABLE_LOCAL_AI === 'true') {
+      try {
+        const words = length === 'short' ? 600 : length === 'long' ? 1800 : 1100;
+        const prompt = `Create a ${tone} business plan for ${businessName}, a company in ${industry}, targeting ${targetMarket}. Optional context: Problem: ${problem}. Solution: ${solution}. Revenue Streams: ${revenueStreams.join(', ')}. Channels: ${channels.join(', ')}. Costs: ${costStructure.join(', ')}. Structure: Executive Summary; Company Overview; Market Analysis; Products & Services; Marketing & Sales Strategy; Operations Plan; Team; Financial Plan (assumptions + 3-year projections summary); SWOT; Milestones & KPIs. Keep total around ${words} words.`;
+        const aiText = await generateText(prompt, { maxTokens: words, category: 'business_plan' });
+        if (aiText) {
+          generatedSections = splitPlanIntoSections(aiText);
+        }
+      } catch (e) {
+        logger.warn('AI business plan generation failed:', e.message);
+      }
+    }
+
+    const plan = generatedSections || generateTemplateBusinessPlan({ businessName, industry, targetMarket, tone, length, problem, solution, revenueStreams, channels, costStructure });
+
+    // Optional PDF generation
+    let pdfUrl = null;
+    if (req.body.generatePDF) {
+      try {
+        const pdfBuffer = await createBusinessPlanPDF(plan);
+        const { default: path } = await import('path');
+        const { default: fs } = await import('fs');
+        const { fileURLToPath } = await import('url');
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        const uploadsDir = path.join(__dirname, '..', '..', 'uploads', 'plans');
+        if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+        const safeName = String(businessName).replace(/[^a-zA-Z0-9-_]/g, '_');
+        const fileName = `plan_${safeName}_${Date.now()}.pdf`;
+        fs.writeFileSync(path.join(uploadsDir, fileName), pdfBuffer);
+        pdfUrl = `/uploads/plans/${fileName}`;
+      } catch (err) {
+        logger.error('Business plan PDF generation failed:', err);
+      }
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage('business-plan-generator', req.user?.id, req.ip, req.get('User-Agent'), { industry, tone, length }, { sections: Object.keys(plan.sections || {}).length }, processingTime);
+    }
+
+    res.json({ success: true, data: { plan, pdfUrl, processingTime } });
+  } catch (error) {
+    logger.error('Business plan generator error:', error);
+    res.status(500).json({ success:false, message:'Failed to generate business plan' });
+  }
+});
+
 function getCurrencySymbol(code) {
   const map = {
     USD: '$', EUR: '€', GBP: '£', CAD: '$', AUD: '$', INR: '₹', JPY: '¥', CNY: '¥', ZAR: 'R', NGN: '₦', BRL: 'R$', MXN: '$'

@@ -530,3 +530,88 @@ export const createInvoicePDF = async (invoiceData) => {
     throw new Error('Failed to generate invoice PDF');
   }
 };
+
+export const createBusinessPlanPDF = async (plan) => {
+  try {
+    const pdfDoc = await PDFDocument.create();
+    const pageSize = [612, 792];
+    const margin = 50;
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const primaryColor = rgb(0.2, 0.3, 0.5);
+    const textColor = rgb(0.1, 0.1, 0.1);
+
+    const drawWrappedText = (page, text, x, y, maxWidth, font, size, color) => {
+      const words = text.split(/\s+/);
+      let line = '';
+      let cursorY = y;
+      const lineHeight = size + 4;
+      const lines = [];
+      for (const w of words) {
+        const test = line ? line + ' ' + w : w;
+        const width = font.widthOfTextAtSize(test, size);
+        if (width > maxWidth && line) {
+          lines.push(line);
+          line = w;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+      lines.forEach((ln) => {
+        page.drawText(ln, { x, y: cursorY, size, font, color });
+        cursorY -= lineHeight;
+      });
+      return cursorY;
+    };
+
+    let page = pdfDoc.addPage(pageSize);
+    let { width, height } = page.getSize();
+    let y = height - margin;
+
+    // Title
+    page.drawText(plan.title || 'Business Plan', { x: margin, y, size: 18, font: boldFont, color: primaryColor });
+    y -= 24;
+
+    if (plan.meta?.businessName) {
+      page.drawText(plan.meta.businessName, { x: margin, y, size: 12, font: font, color: textColor });
+      y -= 18;
+    }
+
+    const sections = plan.sections || {};
+    const maxWidth = width - margin * 2;
+
+    const ensureSpace = (need) => {
+      if (y - need < margin) {
+        page = pdfDoc.addPage(pageSize);
+        ({ width, height } = page.getSize());
+        y = height - margin;
+      }
+    };
+
+    for (const [sectionTitle, content] of Object.entries(sections)) {
+      ensureSpace(40);
+      page.drawText(sectionTitle, { x: margin, y, size: 14, font: boldFont, color: primaryColor });
+      y -= 18;
+      const paragraphs = String(content || '').split(/\n\n+/);
+      for (const p of paragraphs) {
+        const need = 100;
+        ensureSpace(need);
+        y = drawWrappedText(page, p.trim(), margin, y, maxWidth, font, 11, textColor) - 6;
+      }
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
+  } catch (error) {
+    logger.error('Business plan PDF generation error:', error);
+    throw new Error('Failed to generate business plan PDF');
+  }
+};
+
+export default aiService;
+export const generateText = (prompt, options) => aiService.generateText(prompt, options);
+export const analyzeSentiment = (text) => aiService.analyzeSentiment(text);
+export const extractKeywords = (text, count) => aiService.extractKeywords(text, count);
+export const analyzeReadability = (text) => aiService.analyzeReadability(text);
+export const suggestTools = (query) => aiService.suggestTools(query);

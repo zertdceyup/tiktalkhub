@@ -35,6 +35,7 @@ import SloganCreator from "./pages/tools/smartbiz/SloganCreator";
 import LogoSketchWizard from "./pages/tools/smartbiz/LogoSketchWizard";
 import SmartFlyerDesigner from "./pages/tools/smartbiz/SmartFlyerDesigner";
 import InvoiceMaker from "./pages/tools/smartbiz/InvoiceMaker";
+import BusinessPlanGenerator from "./pages/tools/smartbiz/BusinessPlanGenerator";
 import ResumeBuilder from "./pages/tools/career/ResumeBuilder";
 import CoverLetterAI from "./pages/tools/career/CoverLetterAI";
 import LinkedInSummary from "./pages/tools/career/LinkedInSummary";
@@ -74,6 +75,7 @@ const App = () => (
           <Route path="/tools/smartbiz/logo-sketch-wizard" element={<LogoSketchWizard />} />
           <Route path="/tools/smartbiz/smart-flyer-designer" element={<SmartFlyerDesigner />} />
           <Route path="/tools/smartbiz/invoice-maker" element={<InvoiceMaker />} />
+          <Route path="/tools/smartbiz/business-plan-generator" element={<BusinessPlanGenerator />} />
           <Route path="/tools/career" element={<Career />} />
           <Route path="/tools/career/resume-builder" element={<ResumeBuilder />} />
           <Route path="/tools/career/cover-letter-ai" element={<CoverLetterAI />} />
