@@ -2,6 +2,7 @@ import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TikoAI from '@/components/TikoAI';
+import SEO from '@/components/SEO';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -83,6 +84,11 @@ const PDF = () => {
   return (
     <div className="min-h-screen">
       <Header />
+      <SEO 
+        title="PDF Tools - Manage, Edit, Convert, and Secure Your PDFs" 
+        description="A comprehensive toolkit for managing, editing, converting, and securing your PDF documents. Combine, split, compress, and protect your files with ease." 
+        keywords="PDF tools, PDF management, PDF editing, PDF conversion, PDF security, PDF optimization" 
+      />
       
       {/* Hero Section */}
       <section className="py-20 relative overflow-hidden">

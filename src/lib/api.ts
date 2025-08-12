@@ -385,7 +385,7 @@ class ApiClient {
     endTime: number;
   }): Promise<ApiResponse<{ videoUrl: string; processingTime: number }>> {
     const formData = new FormData();
-    formData.append('file', data.file);
+    formData.append('video', data.file);
     formData.append('startTime', data.startTime.toString());
     formData.append('endTime', data.endTime.toString());
 
@@ -402,7 +402,7 @@ class ApiClient {
     count?: number;
   }): Promise<ApiResponse<{ thumbnails: string[]; processingTime: number }>> {
     const formData = new FormData();
-    formData.append('file', data.file);
+    formData.append('video', data.file);
     if (data.timestamp) formData.append('timestamp', data.timestamp.toString());
     if (data.count) formData.append('count', data.count.toString());
 
@@ -444,10 +444,20 @@ class ApiClient {
     quality?: string;
   }): Promise<ApiResponse<{ compressedUrl: string; originalSize: number; compressedSize: number; processingTime: number }>> {
     const formData = new FormData();
-    formData.append('file', data.file);
+    formData.append('pdf', data.file);
     if (data.quality) formData.append('quality', data.quality);
 
     return this.request('/tools/utility/pdf-compressor', {
+      method: 'POST',
+      body: formData,
+      headers: {},
+    });
+  }
+
+  async mergePDFs(data: { files: File[] }): Promise<ApiResponse<{ mergedPdf: string; fileCount: number; totalPages: number; mergedSize: number; processingTime: number }>> {
+    const formData = new FormData();
+    data.files.forEach((f) => formData.append('pdfs', f));
+    return this.request('/tools/utility/pdf-merger', {
       method: 'POST',
       body: formData,
       headers: {},
@@ -473,10 +483,11 @@ class ApiClient {
     resize?: { width?: number; height?: number };
   }): Promise<ApiResponse<{ optimizedUrl: string; originalSize: number; optimizedSize: number; processingTime: number }>> {
     const formData = new FormData();
-    formData.append('file', data.file);
-    if (data.quality) formData.append('quality', data.quality.toString());
+    formData.append('image', data.file);
+    if (data.quality !== undefined) formData.append('quality', String(data.quality));
     if (data.format) formData.append('format', data.format);
-    if (data.resize) formData.append('resize', JSON.stringify(data.resize));
+    if (data.resize?.width) formData.append('width', String(data.resize.width));
+    if (data.resize?.height) formData.append('height', String(data.resize.height));
 
     return this.request('/tools/utility/image-optimizer', {
       method: 'POST',

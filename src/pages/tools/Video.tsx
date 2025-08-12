@@ -5,6 +5,7 @@ import TikoAI from '@/components/TikoAI';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import SEO from '@/components/SEO';
 import { 
   Video, Scissors, ImageIcon, Volume2, 
   Crop, Download, ArrowRight, TrendingUp 
@@ -100,6 +101,14 @@ const VideoTools = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Video Tools Suite | Tiktalkhub"
+        description="Trim videos, extract thumbnails, create GIFs, add captions, and more. Fast, free, and creator-friendly."
+        keywords={["video trimmer","thumbnail extractor","gif maker","caption overlay","shorts cropper"]}
+        canonical="/tools/video"
+        openGraph={{ title: 'Video Tools Suite | Tiktalkhub', description: 'Trim, extract, and create with fast online tools', type: 'website', url: typeof window !== 'undefined' ? window.location.href : '' }}
+        twitter={{ card: 'summary_large_image', title: 'Video Tools Suite | Tiktalkhub', description: 'Trim, extract, and create with fast online tools' }}
+      />
       <Header />
       
       {/* Hero Section */}

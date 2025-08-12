@@ -2,6 +2,7 @@ import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TikoAI from '@/components/TikoAI';
+import SEO from '@/components/SEO';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -106,6 +107,12 @@ const GeneralTools = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="General Tools | Tiktalkhub"
+        description="Handy utility tools including QR code, image optimizer, and more."
+        keywords={["qr code generator","image optimizer","meme generator","file tools"]}
+        canonical="/tools/general"
+      />
       <Header />
       
       {/* Hero Section */}

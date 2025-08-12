@@ -2,6 +2,7 @@ import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TikoAI from '@/components/TikoAI';
+import SEO from '@/components/SEO';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -100,6 +101,12 @@ const SocialTools = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Social Media Tools | Tiktalkhub"
+        description="Hashtag generator, Twitter thread formatter, Facebook captions and more for social growth."
+        keywords={["hashtag generator","twitter thread formatter","facebook caption","social media tools"]}
+        canonical="/tools/social"
+      />
       <Header />
       
       {/* Hero Section */}

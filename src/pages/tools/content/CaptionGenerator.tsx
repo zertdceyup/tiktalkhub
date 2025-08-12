@@ -40,12 +40,11 @@ const CaptionGenerator: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <SEO title="Caption Generator | Tiktalkhub" description="Generate platform-optimized captions with tone, hashtags, emojis, and analysis."
-        keywords={["caption generator","social media","hashtags","emojis"]}
+      <SEO
+        title="Caption Generator | Content Tools | Tiktalkhub"
+        description="Create platform-optimized captions with hashtags, emojis, and CTAs."
+        keywords={["caption generator","social captions","instagram captions","tiktok captions"]}
         canonical="/tools/content/caption-generator"
-        openGraph={{ title: 'Caption Generator | Tiktalkhub', description: 'Generate platform-optimized captions', type: 'website', url: window.location.href }}
-        twitter={{ card: 'summary_large_image', title: 'Caption Generator | Tiktalkhub', description: 'Generate platform-optimized captions' }}
-        jsonLd={jsonLd}
       />
       <Header />
       <section className="py-16">
