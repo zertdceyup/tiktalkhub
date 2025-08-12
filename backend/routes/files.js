@@ -318,4 +318,78 @@ router.post('/cleanup', (req, res) => {
   }
 });
 
+// Chunked upload: init
+router.post('/chunks/init', (req, res) => {
+  try {
+    const { filename, size, mimeType, chunkSize = 5 * 1024 * 1024 } = req.body || {};
+    if (!filename || !size || !mimeType) return res.status(400).json({ success: false, message: 'filename, size, mimeType required' });
+    const uploadId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
+    const tmpDir = path.join(__dirname, '../uploads/chunks', uploadId);
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const chunks = Math.ceil(Number(size) / Number(chunkSize));
+    fs.writeFileSync(path.join(tmpDir, 'meta.json'), JSON.stringify({ filename, size: Number(size), mimeType, chunkSize: Number(chunkSize), chunks }));
+    res.json({ success: true, data: { uploadId, chunks, chunkSize } });
+  } catch (e) {
+    logger.error('Chunks init error:', e);
+    res.status(500).json({ success: false, message: 'Failed to init upload' });
+  }
+});
+
+const chunkStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const tmpDir = path.join(__dirname, '../uploads/chunks', req.params.uploadId);
+    fs.mkdirSync(tmpDir, { recursive: true });
+    cb(null, tmpDir);
+  },
+  filename: (req, file, cb) => {
+    const idx = req.body.chunkIndex || '0';
+    cb(null, `part_${idx}`);
+  }
+});
+const uploadChunk = multer({ storage: chunkStorage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+// Chunked upload: upload part
+router.post('/chunks/:uploadId', uploadChunk.single('chunk'), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No chunk' });
+    res.json({ success: true });
+  } catch (e) {
+    logger.error('Chunk upload error:', e);
+    res.status(500).json({ success: false, message: 'Failed to upload chunk' });
+  }
+});
+
+// Chunked upload: complete
+router.post('/chunks/:uploadId/complete', (req, res) => {
+  try {
+    const { uploadId } = req.params;
+    const baseDir = path.join(__dirname, '../uploads/chunks', uploadId);
+    const metaPath = path.join(baseDir, 'meta.json');
+    if (!fs.existsSync(metaPath)) return res.status(400).json({ success: false, message: 'Upload not found' });
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+    const parts = Array.from({ length: meta.chunks }).map((_, i) => path.join(baseDir, `part_${i}`));
+    const finalName = `file-${Date.now()}-${uploadId}${path.extname(meta.filename)}`;
+    const finalPath = path.join(__dirname, '../uploads', finalName);
+    const write = fs.createWriteStream(finalPath);
+    for (const p of parts) {
+      if (!fs.existsSync(p)) return res.status(400).json({ success: false, message: `Missing chunk ${path.basename(p)}` });
+      const data = fs.readFileSync(p);
+      write.write(data);
+    }
+    write.end();
+
+    const userId = req.user?.id || null;
+    const result = db.prepare(`INSERT INTO user_files (user_id, filename, original_name, file_path, file_size, mime_type, tool_used) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(userId, finalName, meta.filename, finalPath, meta.size, meta.mimeType, 'chunked');
+
+    // Cleanup
+    try { fs.rmSync(baseDir, { recursive: true, force: true }); } catch {}
+
+    res.json({ success: true, data: { fileId: result.lastInsertRowid, filename: finalName, url: `/api/files/${finalName}`, size: meta.size, mimeType: meta.mimeType } });
+  } catch (e) {
+    logger.error('Chunks complete error:', e);
+    res.status(500).json({ success: false, message: 'Failed to complete upload' });
+  }
+});
+
 export default router;
