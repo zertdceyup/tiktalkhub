@@ -7,49 +7,40 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { 
   FileText, User, Linkedin, BrainCircuit, 
-  Target, Briefcase, ArrowRight, TrendingUp 
+  Target, Briefcase, ArrowRight, TrendingUp, Sparkles, Mic 
 } from 'lucide-react';
 
 const Career = () => {
   const tools = [
     {
-      name: "Resume AI Builder",
-      description: "ATS-optimized resumes that get you interviews",
-      icon: FileText,
-      features: ["ATS optimization", "Industry templates", "Skills matching"],
-      popular: true
-    },
-    {
-      name: "Cover Letter Generator",
-      description: "Personalized cover letters for any job application",
-      icon: User,
-      features: ["Job-specific content", "Company research", "Professional tone"]
-    },
-    {
-      name: "LinkedIn Summary Generator",
-      description: "Compelling LinkedIn profiles that attract recruiters",
-      icon: Linkedin,
-      features: ["Keyword optimization", "Industry insights", "Personal branding"],
-      popular: true
-    },
-    {
-      name: "AI Job Match",
-      description: "Find jobs that perfectly match your skills and experience",
-      icon: Target,
-      features: ["Skills analysis", "Salary insights", "Company culture fit"]
-    },
-    {
-      name: "Interview Simulator",
-      description: "Practice interviews with AI-powered feedback",
-      icon: BrainCircuit,
-      features: ["Common questions", "Behavioral analysis", "Industry-specific prep"],
-      popular: true
-    },
-    {
-      name: "Portfolio Builder",
-      description: "Showcase your work with professional portfolio sites",
+      name: "Resume Builder",
+      description: "Build ATS-friendly resumes with AI suggestions",
       icon: Briefcase,
-      features: ["Responsive design", "Project showcases", "Contact integration"]
+      features: ["ATS score", "Templates", "Keyword targeting"],
+      href: "/tools/career/resume-builder",
+      popular: true
+    },
+    {
+      name: "Cover Letter AI",
+      description: "Generate tailored cover letters for each job",
+      icon: FileText,
+      features: ["Tone variants", "Company-specific hooks", "Export"],
+      href: "/tools/career/cover-letter-ai"
+    },
+    {
+      name: "LinkedIn Summary",
+      description: "Create engaging LinkedIn summaries and headlines",
+      icon: Sparkles,
+      features: ["Persona presets", "Keyword density", "Length tuning"],
+      href: "/tools/career/linkedin-summary",
+      popular: true
+    },
+    {
+      name: "Interview Coach",
+      description: "Practice interviews with timed sessions and tips",
+      icon: Mic,
+      features: ["Question bank", "STAR assistant", "Progress tracking"],
+      href: "/tools/career/interview-coach"
     }
   ];
 
@@ -166,7 +157,7 @@ const Career = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant="outline">
+                  <Button className="w-full" variant="outline" onClick={() => window.location.href = tool.href }>
                     Try Now
                   </Button>
                 </CardContent>
