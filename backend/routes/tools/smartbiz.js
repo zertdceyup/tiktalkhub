@@ -361,8 +361,28 @@ router.post('/invoice-maker', [
 
     // Generate PDF if requested
     let pdfBuffer = null;
+    let pdfUrl = null;
     if (req.body.generatePDF) {
       pdfBuffer = await createInvoicePDF(invoiceData);
+      // Persist PDF to disk and return a URL
+      try {
+        const { default: path } = await import('path');
+        const { default: fs } = await import('fs');
+        const { fileURLToPath } = await import('url');
+        const __filename = fileURLToPath(import.meta.url);
+        const __dirname = path.dirname(__filename);
+        const uploadsDir = path.join(__dirname, '..', '..', 'uploads', 'invoices');
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        const safeInvoiceNum = String(invoiceNumber).replace(/[^a-zA-Z0-9-_]/g, '_');
+        const fileName = `invoice_${safeInvoiceNum}_${Date.now()}.pdf`;
+        const filePath = path.join(uploadsDir, fileName);
+        fs.writeFileSync(filePath, pdfBuffer);
+        pdfUrl = `/uploads/invoices/${fileName}`;
+      } catch (fsErr) {
+        logger.error('Failed to persist invoice PDF:', fsErr);
+      }
     }
 
     const processingTime = Date.now() - startTime;
@@ -385,6 +405,7 @@ router.post('/invoice-maker', [
       data: {
         invoice: invoiceData,
         pdfGenerated: !!pdfBuffer,
+        pdfUrl,
         processingTime
       }
     });
