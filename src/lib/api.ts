@@ -565,6 +565,13 @@ class ApiClient {
     });
   }
 
+  async youtubeThumbnail(data: { url?: string; videoId?: string }): Promise<ApiResponse<{ videoId: string; thumbnails: { label: string; url: string; width: number; height: number }[]; processingTime: number }>> {
+    return this.request('/tools/utility/youtube-thumbnail', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // AI endpoints
   async chatWithTiko(data: {
     message: string;

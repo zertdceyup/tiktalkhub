@@ -510,4 +510,71 @@ router.post('/pdf-merger', upload.array('pdfs', 10), async (req, res) => {
   }
 });
 
+// YouTube Thumbnail Downloader
+router.post('/youtube-thumbnail', [
+  body('url').optional().isString(),
+  body('videoId').optional().isString()
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { url, videoId } = req.body;
+    const id = extractYouTubeId(url || videoId);
+
+    if (!id) {
+      return res.status(400).json({ success: false, message: 'Unable to parse a valid YouTube video ID' });
+    }
+
+    const variants = [
+      { name: 'maxres', file: 'maxresdefault.jpg', width: 1280, height: 720 },
+      { name: 'sd', file: 'sddefault.jpg', width: 640, height: 480 },
+      { name: 'hq', file: 'hqdefault.jpg', width: 480, height: 360 },
+      { name: 'mq', file: 'mqdefault.jpg', width: 320, height: 180 },
+      { name: 'default', file: 'default.jpg', width: 120, height: 90 }
+    ];
+
+    const thumbnails = variants.map(v => ({
+      label: v.name,
+      url: `https://img.youtube.com/vi/${id}/${v.file}`,
+      width: v.width,
+      height: v.height
+    }));
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage('youtube-thumbnail-downloader', req.user?.id, req.ip, req.get('User-Agent'), { id }, { variants: thumbnails.length }, processingTime);
+    }
+
+    res.json({ success: true, data: { videoId: id, thumbnails, processingTime } });
+  } catch (error) {
+    logger.error('YouTube thumbnail error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch thumbnails' });
+  }
+});
+
+function extractYouTubeId(input) {
+  if (!input) return null;
+  const str = String(input).trim();
+  // Handle full URLs and shorts
+  const patterns = [
+    /(?:v=|v%3D)([a-zA-Z0-9_-]{11})/,                   // query param v=
+    /youtu\.be\/([a-zA-Z0-9_-]{11})/,                  // youtu.be/ID
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,      // shorts
+    /youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,       // embed
+    /youtube\.com\/watch\?.*?v=([a-zA-Z0-9_-]{11})/   // watch?v=
+  ];
+  for (const re of patterns) {
+    const m = str.match(re);
+    if (m && m[1]) return m[1];
+  }
+  // If raw 11-char ID
+  if (/^[a-zA-Z0-9_-]{11}$/.test(str)) return str;
+  return null;
+}
+
 export default router;
