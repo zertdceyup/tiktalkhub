@@ -18,20 +18,23 @@ const VideoTools = () => {
       description: "AI-powered captions that boost engagement",
       icon: Video,
       features: ["Auto-sync timing", "Multiple languages", "Style customization"],
-      popular: true
+      popular: true,
+      route: "/tools/video/smart-caption-generator"
     },
     {
       name: "Thumbnail Optimizer",
       description: "Create click-worthy thumbnails that drive views",
       icon: ImageIcon,
-      features: ["A/B testing", "CTR optimization", "Template library"]
+      features: ["A/B testing", "CTR optimization", "Template library"],
+      route: "/tools/video/thumbnail-optimizer"
     },
     {
       name: "Batch Trimmer",
       description: "Trim multiple videos simultaneously",
       icon: Scissors,
       features: ["Bulk processing", "Custom presets", "Quality preservation"],
-      popular: true
+      popular: true,
+      route: "/tools/video/batch-trimmer"
     },
     {
       name: "Noise Remover",
@@ -176,7 +179,7 @@ const VideoTools = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant="outline">
+                  <Button className="w-full" variant="outline" onClick={() => tool.route ? window.location.assign(tool.route) : null}>
                     Try Now
                   </Button>
                 </CardContent>

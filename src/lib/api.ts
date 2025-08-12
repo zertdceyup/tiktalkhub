@@ -813,6 +813,15 @@ class ApiClient {
     if (data.outputFormat) formData.append('outputFormat', data.outputFormat);
     return this.request('/tools/video/batch-trimmer', { method: 'POST', body: formData, headers: {} });
   }
+
+  async generateSmartCaptions(data: { file: File; language?: 'en'|'es'|'fr'|'de'|'it'; maxLineLength?: number; includePunctuation?: boolean }): Promise<ApiResponse<{ language: string; captions: { start: number; end: number; text: string }[]; srt: string; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.language) formData.append('language', data.language);
+    if (data.maxLineLength !== undefined) formData.append('maxLineLength', String(data.maxLineLength));
+    if (data.includePunctuation !== undefined) formData.append('includePunctuation', String(data.includePunctuation));
+    return this.request('/tools/video/smart-caption-generator', { method: 'POST', body: formData, headers: {} });
+  }
 }
 
 // Create and export API client instance

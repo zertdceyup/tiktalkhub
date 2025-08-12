@@ -562,6 +562,66 @@ router.post('/thumbnail-optimizer', upload.single('video'), [
   }
 });
 
+router.post('/smart-caption-generator', upload.single('video'), [
+  body('language').optional().isIn(['en','es','fr','de','it']),
+  body('maxLineLength').optional().isInt({ min: 20, max: 80 }),
+  body('includePunctuation').optional().isBoolean(),
+], async (req, res) => {
+  const started = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file provided' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const language = req.body.language || 'en';
+    const maxLineLength = req.body.maxLineLength ? Number(req.body.maxLineLength) : 42;
+    const includePunctuation = req.body.includePunctuation === 'true' || req.body.includePunctuation === true;
+
+    // Mock transcription segments
+    const segments = [
+      { start: 0.0, end: 2.8, text: 'welcome to tiktalkhub' },
+      { start: 2.8, end: 6.2, text: 'today we are showing a demo of smart captions' },
+      { start: 6.2, end: 9.0, text: 'everything runs locally with no paid apis' },
+      { start: 9.0, end: 12.5, text: 'optimize your content with our tools' }
+    ];
+
+    const normalize = (t) => {
+      const line = t.slice(0, maxLineLength);
+      if (!includePunctuation) return line.replace(/[.,!?;:]/g, '');
+      return line;
+    };
+
+    const captions = segments.map(s => ({ start: s.start, end: s.end, text: normalize(s.text) }));
+
+    const toSrtTime = (seconds) => {
+      const s = Number(seconds) || 0;
+      const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const ss = String(Math.floor(s % 60)).padStart(2, '0');
+      const ms = String(Math.floor((s - Math.floor(s)) * 1000)).padStart(3, '0');
+      return `${hh}:${mm}:${ss},${ms}`;
+    };
+
+    const srt = captions.map((c, i) => `${i + 1}\n${toSrtTime(c.start)} --> ${toSrtTime(c.end)}\n${c.text}\n`).join('\n');
+
+    const processingTime = Date.now() - started;
+
+    if (req.trackUsage) {
+      req.trackUsage('smart-caption-generator', req.user?.id, req.ip, req.get('User-Agent'), { size: req.file.size, language }, { captions: captions.length }, processingTime);
+    }
+
+    res.json({ success: true, data: { language, captions, srt, processingTime, note: 'Demo implementation. In production, local ASR (e.g., Whisper CPP) would be used.' } });
+  } catch (error) {
+    logger.error('Smart caption generator error:', error);
+    res.status(500).json({ success: false, message: 'Failed to generate captions' });
+  }
+});
+
 function formatSrtTime(seconds) {
   const s = Number(seconds) || 0;
   const hh = String(Math.floor(s / 3600)).padStart(2, '0');

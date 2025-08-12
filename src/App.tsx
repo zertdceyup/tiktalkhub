@@ -51,6 +51,7 @@ import ShortsVerticalCropper from "./pages/tools/video/ShortsVerticalCropper";
 import NoiseRemover from "./pages/tools/video/NoiseRemover";
 import BatchTrimmer from "./pages/tools/video/BatchTrimmer";
 import ThumbnailOptimizer from "./pages/tools/video/ThumbnailOptimizer";
+import SmartCaptionGenerator from "./pages/tools/video/SmartCaptionGenerator";
 import QRCodeGenerator from "./pages/tools/utility/QRCodeGenerator";
 import ImageOptimizer from "./pages/tools/utility/ImageOptimizer";
 import PDFMerger from "./pages/tools/utility/PDFMerger";
@@ -113,6 +114,7 @@ const App = () => (
             <Route path="/tools/video/batch-trimmer" element={<BatchTrimmer />} />
 <Route path="/tools/video/shorts-vertical-cropper" element={<ShortsVerticalCropper />} />
 <Route path="/tools/video/caption-overlay" element={<CaptionOverlay />} />
+            <Route path="/tools/video/smart-caption-generator" element={<SmartCaptionGenerator />} />
 <Route path="/tools/video/noise-remover" element={<NoiseRemover />} />
           <Route path="/tools/social" element={<SocialTools />} />
           <Route path="/tools/social/hashtag-generator" element={<HashtagGenerator />} />
