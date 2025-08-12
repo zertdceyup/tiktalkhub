@@ -3,6 +3,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TikoAI from '@/components/TikoAI';
 import SEO from '@/components/SEO';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -111,6 +112,15 @@ const GeneralTools = () => {
     }
   ];
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'General Tools',
+    url: typeof window !== 'undefined' ? window.location.href : '',
+    hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web', url: `${baseUrl}${t.route}` }))
+  };
+
   return (
     <div className="min-h-screen">
       <SEO
@@ -118,8 +128,12 @@ const GeneralTools = () => {
         description="Handy utility tools including QR code, image optimizer, and more."
         keywords={["qr code generator","image optimizer","meme generator","file tools"]}
         canonical="/tools/general"
+        jsonLd={jsonLd}
       />
       <Header />
+      <div className="container mx-auto px-6">
+        <Breadcrumbs trail={[{ name: 'Home', href: '/' }, { name: 'General Tools' }]} jsonLdBaseUrl={baseUrl} />
+      </div>
       
       {/* Hero Section */}
       <section className="py-20 relative overflow-hidden">
