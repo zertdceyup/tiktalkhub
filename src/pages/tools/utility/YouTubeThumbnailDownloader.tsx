@@ -55,15 +55,12 @@ const YouTubeThumbnailDownloader: React.FC = () => {
                 <Button className="btn-gold" onClick={() => mutate()} disabled={isPending || (!url && !videoId)}>Get Thumbnails</Button>
               </div>
               {thumbs.length > 0 && (
-                <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
                   {thumbs.map((t, idx) => (
-                    <div key={idx} className="border rounded overflow-hidden">
-                      <img src={t.url} alt={t.label} className="w-full h-auto" />
-                      <div className="p-2 text-xs text-muted-foreground flex justify-between">
-                        <span>{t.label.toUpperCase()}</span>
-                        <a className="text-primary" href={t.url} target="_blank" rel="noreferrer">Download</a>
-                      </div>
-                    </div>
+                    <a key={t.url} href={t.url} target="_blank" rel="noreferrer" className="block border rounded overflow-hidden">
+                      <img src={t.url} alt={t.label} className="w-full" loading="lazy" />
+                      <div className="px-2 py-1 text-xs">{t.label} • {t.width}x{t.height}</div>
+                    </a>
                   ))}
                 </div>
               )}

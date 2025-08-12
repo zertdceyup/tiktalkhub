@@ -98,7 +98,7 @@ const ThumbnailOptimizer: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                   {candidates.map((c) => (
                     <div key={c.id} className="border rounded overflow-hidden">
-                      <img src={c.url} alt={`Candidate ${c.id}`} className="w-full" />
+                      <img src={c.url} alt={`Candidate ${c.id}`} className="w-full" loading="lazy" />
                       <div className="p-3 text-sm">
                         <div className="font-medium">Score: {c.score}</div>
                         <div className="text-muted-foreground text-xs">t={c.timestamp}s • {c.size.width}x{c.size.height}</div>

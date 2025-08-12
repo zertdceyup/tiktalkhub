@@ -77,7 +77,7 @@ const GifMaker: React.FC = () => {
               {gif && (
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Frames: {gif.output?.frames}, Size: {Math.round((gif.output?.size||0)/1024)} KB</p>
-                  <img src={gif.url} alt="Generated GIF" className="max-w-full rounded" />
+                  <img src={gif.url} alt="Generated GIF" className="max-w-full rounded" loading="lazy" />
                 </div>
               )}
             </CardContent>

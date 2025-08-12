@@ -57,10 +57,10 @@ const ThumbnailSelector: React.FC = () => {
               </div>
               {thumbs.length > 0 && (
                 <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {thumbs.map((t, idx) => (
-                    <div key={idx} className="rounded border overflow-hidden">
-                      <img src={t.url} alt={`thumb-${idx}`} className="w-full h-auto" />
-                      <div className="p-2 text-xs text-muted-foreground">{Math.round(t.timestamp)}s</div>
+                  {thumbs.map((t) => (
+                    <div key={t.id} className="border rounded overflow-hidden">
+                      <img src={t.url} alt={`Thumb ${t.id}`} className="w-full h-auto" loading="lazy" />
+                      <div className="p-2 text-xs text-muted-foreground">t={t.timestamp}s • {t.width}x{t.height}</div>
                     </div>
                   ))}
                 </div>

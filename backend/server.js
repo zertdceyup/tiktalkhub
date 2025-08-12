@@ -97,6 +97,39 @@ app.get('/health', (req, res) => {
   });
 });
 
+// robots.txt
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *\nAllow: /\nSitemap: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/sitemap.xml`);
+});
+
+// sitemap.xml (basic)
+app.get('/sitemap.xml', (req, res) => {
+  const base = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const urls = [
+    '/', '/about','/contact','/blog',
+    '/tools/smartbiz','/tools/career','/tools/video','/tools/social','/tools/tiktok','/tools/general','/tools/pdf',
+    '/tools/smartbiz/business-name-generator','/tools/smartbiz/slogan-creator','/tools/smartbiz/logo-sketch-wizard','/tools/smartbiz/smart-flyer-designer','/tools/smartbiz/invoice-maker','/tools/smartbiz/business-plan-generator',
+    '/tools/career/resume-builder','/tools/career/cover-letter-ai','/tools/career/linkedin-summary','/tools/career/interview-coach','/tools/career/job-match-optimizer',
+    '/tools/video/trimmer','/tools/video/thumbnail-selector','/tools/video/gif-maker','/tools/video/shorts-vertical-cropper','/tools/video/caption-overlay','/tools/video/noise-remover','/tools/video/batch-trimmer','/tools/video/thumbnail-optimizer','/tools/video/smart-caption-generator',
+    '/tools/social/hashtag-generator','/tools/social/twitter-thread-formatter','/tools/social/facebook-caption-creator','/tools/social/bio-link-builder','/tools/social/link-shortener',
+    '/tools/utility/qr-code-generator','/tools/utility/image-optimizer','/tools/utility/pdf-merger','/tools/utility/youtube-thumbnail-downloader','/tools/utility/pdf-splitter','/tools/utility/pdf-password-protector','/tools/utility/pdf-to-image',
+    '/tools/general/twitter-thread-previewer','/tools/general/image-remixer','/tools/content/text-summarizer','/tools/content/text-to-speech','/tools/content/blog-idea-generator','/tools/content/headline-analyzer','/tools/content/caption-generator'
+  ];
+  const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `<url><loc>${base}${u}</loc></url>`).join('\n')}\n</urlset>`;
+  res.type('application/xml').send(body);
+});
+
+// placeholder OG image endpoint
+app.get('/api/og-image', async (req, res) => {
+  // For now, return a 1x1 PNG; later integrate dynamic image rendering
+  const img = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGP4BwQACfsD/q+Hj7kAAAAASUVORK5CYII=',
+    'base64'
+  );
+  res.setHeader('Content-Type', 'image/png');
+  res.send(img);
+});
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes);

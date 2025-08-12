@@ -81,7 +81,7 @@ const PDFToImage: React.FC = () => {
                 <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
                   {images.map((img) => (
                     <div key={img.page} className="border rounded overflow-hidden">
-                      <img src={img.url} alt={`Page ${img.page}`} className="w-full h-auto" />
+                      <img key={img.page} src={img.url} alt={`Page ${img.page}`} className="w-full rounded" loading="lazy" />
                       <div className="p-2 text-xs text-muted-foreground flex justify-between">
                         <span>Page {img.page}</span>
                         <button className="text-primary" onClick={() => download(img.url, img.page)}>Download</button>
