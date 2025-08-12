@@ -2,6 +2,8 @@ import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TikoAI from '@/components/TikoAI';
+import SEO from '@/components/SEO';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -104,9 +106,22 @@ const TikTokTools = () => {
     }
   ];
 
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'TikTok Toolkit',
+    url: typeof window !== 'undefined' ? window.location.href : '',
+    hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'MultimediaApplication', operatingSystem: 'Web', url: `${baseUrl}/tools/tiktok` }))
+  };
+
   return (
     <div className="min-h-screen">
+      <SEO title="TikTok Tools | Tiktalkhub" description="Trending audio, hashtag heatmap, viral hooks, and more for TikTok creators." keywords={["tiktok tools","trending audio","viral hook", "hashtag heatmap"]} canonical="/tools/tiktok" jsonLd={jsonLd} />
       <Header />
+      <div className="container mx-auto px-6">
+        <Breadcrumbs trail={[{ name: 'Home', href: '/' }, { name: 'TikTok Tools' }]} jsonLdBaseUrl={baseUrl} />
+      </div>
       
       {/* Hero Section */}
       <section className="py-20 relative overflow-hidden">
