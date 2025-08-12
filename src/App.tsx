@@ -38,6 +38,10 @@ import ResumeBuilder from "./pages/tools/career/ResumeBuilder";
 import CoverLetterAI from "./pages/tools/career/CoverLetterAI";
 import LinkedInSummary from "./pages/tools/career/LinkedInSummary";
 import InterviewCoach from "./pages/tools/career/InterviewCoach";
+import BlogIdeaGenerator from "./pages/tools/content/BlogIdeaGenerator";
+import HeadlineAnalyzer from "./pages/tools/content/HeadlineAnalyzer";
+import CaptionGenerator from "./pages/tools/content/CaptionGenerator";
+import TextToSpeech from "./pages/tools/content/TextToSpeech";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +84,10 @@ const App = () => (
           <Route path="/tools/tiktok" element={<TikTokTools />} />
           <Route path="/tools/ai-creator" element={<AICreator />} />
           <Route path="/tools/blog" element={<BlogSEO />} />
+          <Route path="/tools/content/blog-idea-generator" element={<BlogIdeaGenerator />} />
+          <Route path="/tools/content/headline-analyzer" element={<HeadlineAnalyzer />} />
+          <Route path="/tools/content/caption-generator" element={<CaptionGenerator />} />
+          <Route path="/tools/content/text-to-speech" element={<TextToSpeech />} />
           <Route path="/tools/pdf" element={<PDF />} />
           <Route path="/tools/emotional" element={<EmotionalUtility />} />
           

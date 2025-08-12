@@ -311,12 +311,12 @@ class ApiClient {
 
   // Content tools
   async generateBlogIdeas(data: {
-    topic: string;
-    industry?: string;
-    audience?: string;
+    niche: string;
+    targetAudience?: string;
+    contentType?: 'how-to' | 'listicle' | 'review' | 'tutorial' | 'news' | 'opinion';
     keywords?: string[];
     count?: number;
-  }): Promise<ApiResponse<{ ideas: string[]; processingTime: number }>> {
+  }): Promise<ApiResponse<{ niche: string; contentType: string; targetAudience: string; blogIdeas: any[]; processingTime: number }>> {
     return this.request('/tools/content/blog-idea-generator', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -324,12 +324,13 @@ class ApiClient {
   }
 
   async generateCaptions(data: {
+    platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'tiktok' | 'general';
     content: string;
-    platform?: string;
-    tone?: string;
-    hashtags?: boolean;
-    count?: number;
-  }): Promise<ApiResponse<{ captions: string[]; processingTime: number }>> {
+    tone?: 'professional' | 'casual' | 'funny' | 'inspirational' | 'promotional';
+    includeHashtags?: boolean;
+    includeEmojis?: boolean;
+    callToAction?: string;
+  }): Promise<ApiResponse<{ caption: string; hashtags: string[]; analysis: any; platform: string; tone: string; processingTime: number }>> {
     return this.request('/tools/content/caption-generator', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -338,9 +339,21 @@ class ApiClient {
 
   async analyzeHeadline(data: {
     headline: string;
-    type?: string;
-  }): Promise<ApiResponse<{ analysis: any; suggestions: string[]; processingTime: number }>> {
+    type?: 'blog' | 'email' | 'ad' | 'social' | 'news';
+  }): Promise<ApiResponse<{ headline: string; type: string; analysis: any; suggestions: string[]; alternatives: string[]; processingTime: number }>> {
     return this.request('/tools/content/headline-analyzer', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async textToSpeech(data: {
+    text: string;
+    voice?: 'male' | 'female' | 'child';
+    speed?: number; // 0.5 - 2.0
+    language?: 'en' | 'es' | 'fr' | 'de' | 'it';
+  }): Promise<ApiResponse<{ audioData: any; textAnalysis: any; settings: any; processingTime: number }>> {
+    return this.request('/tools/content/text-to-speech', {
       method: 'POST',
       body: JSON.stringify(data),
     });
