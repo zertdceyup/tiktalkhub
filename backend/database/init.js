@@ -330,6 +330,7 @@ export const initializeDatabase = async () => {
       { name: 'Video Trimmer', slug: 'video-trimmer', category: 'video', description: 'Trim video files', icon: '✂️' },
       { name: 'Thumbnail Selector', slug: 'thumbnail-selector', category: 'video', description: 'Extract video thumbnails', icon: '🖼️' },
       { name: 'GIF Maker', slug: 'gif-maker', category: 'video', description: 'Create GIFs from videos', icon: '🎬' },
+      { name: 'Shorts Vertical Cropper', slug: 'shorts-vertical-cropper', category: 'video', description: 'Auto-crop landscape videos to vertical formats', icon: '📱' },
 
       // Social Tools
       { name: 'Hashtag Generator', slug: 'hashtag-generator', category: 'social', description: 'Generate trending hashtags', icon: '#️⃣' },

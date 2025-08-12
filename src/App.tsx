@@ -47,6 +47,7 @@ import TextToSpeech from "./pages/tools/content/TextToSpeech";
 import VideoTrimmer from "./pages/tools/video/VideoTrimmer";
 import ThumbnailSelector from "./pages/tools/video/ThumbnailSelector";
 import GifMaker from "./pages/tools/video/GifMaker";
+import ShortsVerticalCropper from "./pages/tools/video/ShortsVerticalCropper";
 import QRCodeGenerator from "./pages/tools/utility/QRCodeGenerator";
 import ImageOptimizer from "./pages/tools/utility/ImageOptimizer";
 import PDFMerger from "./pages/tools/utility/PDFMerger";
@@ -105,7 +106,8 @@ const App = () => (
           <Route path="/tools/video/trimmer" element={<VideoTrimmer />} />
           <Route path="/tools/video/thumbnail-selector" element={<ThumbnailSelector />} />
           <Route path="/tools/video/gif-maker" element={<GifMaker />} />
-          <Route path="/tools/video/caption-overlay" element={<CaptionOverlay />} />
+<Route path="/tools/video/shorts-vertical-cropper" element={<ShortsVerticalCropper />} />
+<Route path="/tools/video/caption-overlay" element={<CaptionOverlay />} />
           <Route path="/tools/social" element={<SocialTools />} />
           <Route path="/tools/social/hashtag-generator" element={<HashtagGenerator />} />
           <Route path="/tools/social/twitter-thread-formatter" element={<TwitterThreadFormatter />} />

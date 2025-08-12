@@ -454,6 +454,30 @@ class ApiClient {
     return this.request('/tools/video/caption-overlay', { method: 'POST', body: formData, headers: {} });
   }
 
+  async shortsVerticalCropper(data: {
+    file: File;
+    aspect?: '9:16' | '1:1' | '4:5';
+    strategy?: 'center' | 'smart-face' | 'smart-motion' | 'manual';
+    gravity?: 'center' | 'top' | 'bottom' | 'left' | 'right';
+    background?: 'blur' | 'black' | 'white';
+    resolution?: '720x1280' | '1080x1920' | '1440x2560';
+    startTime?: number;
+    endTime?: number;
+    safeZones?: { top?: number; bottom?: number; left?: number; right?: number };
+  }): Promise<ApiResponse<{ output: { url: string; aspect: string; strategy: string; gravity: string; background: string; resolution: string; duration: number; safeZones: any; cropTimeline: any[] }; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.aspect) formData.append('aspect', data.aspect);
+    if (data.strategy) formData.append('strategy', data.strategy);
+    if (data.gravity) formData.append('gravity', data.gravity);
+    if (data.background) formData.append('background', data.background);
+    if (data.resolution) formData.append('resolution', data.resolution);
+    if (data.startTime !== undefined) formData.append('startTime', String(data.startTime));
+    if (data.endTime !== undefined) formData.append('endTime', String(data.endTime));
+    if (data.safeZones) formData.append('safeZones', JSON.stringify(data.safeZones));
+    return this.request('/tools/video/shorts-vertical-cropper', { method: 'POST', body: formData, headers: {} });
+  }
+
   // Social tools
   async generateHashtags(data: {
     content: string;

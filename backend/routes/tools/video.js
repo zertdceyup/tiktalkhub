@@ -290,6 +290,100 @@ router.post('/caption-overlay', upload.single('video'), [
   }
 });
 
+router.post('/shorts-vertical-cropper', upload.single('video'), [
+  body('aspect').optional().isIn(['9:16','1:1','4:5']),
+  body('strategy').optional().isIn(['center','smart-face','smart-motion','manual']),
+  body('gravity').optional().isIn(['center','top','bottom','left','right']),
+  body('background').optional().isIn(['blur','black','white']),
+  body('resolution').optional().isIn(['720x1280','1080x1920','1440x2560']),
+  body('startTime').optional().isFloat({ min: 0 }),
+  body('endTime').optional().isFloat({ min: 0 }),
+  body('safeZones').optional().isString(), // JSON string
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file provided' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const {
+      aspect = '9:16',
+      strategy = 'center',
+      gravity = 'center',
+      background = 'blur',
+      resolution = '1080x1920',
+      startTime: cropStart = 0,
+      endTime: cropEnd = 0,
+      safeZones: safeZonesJson
+    } = req.body;
+
+    let safeZones = { top: 0, bottom: 0, left: 0, right: 0 };
+    if (safeZonesJson) {
+      try {
+        const parsed = JSON.parse(safeZonesJson);
+        safeZones = {
+          top: Number(parsed.top) || 0,
+          bottom: Number(parsed.bottom) || 0,
+          left: Number(parsed.left) || 0,
+          right: Number(parsed.right) || 0,
+        };
+      } catch (_) {
+        // ignore parse error; keep defaults
+      }
+    }
+
+    // Mock crop timeline (e.g., every second, a crop box)
+    const duration = cropEnd > cropStart ? (cropEnd - cropStart) : 15; // 15s default
+    const frames = Math.min(30, Math.ceil(duration));
+    const cropTimeline = Array.from({ length: frames }).map((_, i) => ({
+      t: cropStart + i,
+      box: {
+        // normalized [0..1] crop box for the source video
+        x: 0.1 + 0.02 * Math.sin(i / 3),
+        y: 0.1 + 0.02 * Math.cos(i / 4),
+        w: aspect === '9:16' ? 0.5625 : aspect === '4:5' ? 0.8 : 1.0,
+        h: 1.0,
+      }
+    }));
+
+    const output = {
+      url: `/api/video/shorts-crop-${Date.now()}.mp4`,
+      aspect,
+      strategy,
+      gravity,
+      background,
+      resolution,
+      duration,
+      safeZones,
+      cropTimeline,
+    };
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage(
+        'shorts-vertical-cropper',
+        req.user?.id,
+        req.ip,
+        req.get('User-Agent'),
+        { size: req.file.size, aspect, strategy, resolution },
+        { duration, frames: cropTimeline.length },
+        processingTime
+      );
+    }
+
+    res.json({ success: true, data: { output, processingTime, note: 'Demo implementation. In production, actual smart framing and crop rendering would occur.' } });
+  } catch (error) {
+    logger.error('Shorts vertical cropper error:', error);
+    res.status(500).json({ success: false, message: 'Failed to crop video' });
+  }
+});
+
 function formatSrtTime(seconds) {
   const s = Number(seconds) || 0;
   const hh = String(Math.floor(s / 3600)).padStart(2, '0');
