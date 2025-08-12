@@ -866,6 +866,22 @@ class ApiClient {
     if (data.includePunctuation !== undefined) formData.append('includePunctuation', String(data.includePunctuation));
     return this.request('/tools/video/smart-caption-generator', { method: 'POST', body: formData, headers: {} });
   }
+
+  async analyzeReadabilityText(data: { text: string }): Promise<ApiResponse<{ readability: any; sentiment: any; keywords: string[]; processingTime: number }>> {
+    return this.request('/tools/content/readability-checker', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async repurposeContent(data: { text: string; target: 'tweet-thread'|'linkedin-post'|'tiktok-script'|'instagram-caption'|'blog-outline' }): Promise<ApiResponse<{ target: string; output: string; processingTime: number }>> {
+    return this.request('/tools/content/content-repurposer', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async ideaToScript(data: { idea: string; platform?: 'tiktok'|'youtube'|'reels'|'shorts'|'podcast' }): Promise<ApiResponse<{ platform: string; script: string; processingTime: number }>> {
+    return this.request('/tools/content/idea-to-script', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async analyzeSocialHook(data: { hook: string }): Promise<ApiResponse<{ hook: string; styles: string[]; sentiment: any; readability: any; score: number; processingTime: number }>> {
+    return this.request('/tools/content/social-hook-analyzer', { method: 'POST', body: JSON.stringify(data) });
+  }
 }
 
 // Create and export API client instance

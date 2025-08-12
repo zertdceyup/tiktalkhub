@@ -502,6 +502,123 @@ router.post('/tts', [
   }
 });
 
+// Readability Checker
+router.post('/readability-checker', [
+  body('text').isLength({ min: 20 })
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { text } = req.body;
+    const readability = await analyzeReadability(text);
+    const sentiment = analyzeSentiment(text);
+    const keywords = extractKeywords(text, 10);
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('readability-checker', req.user?.id, req.ip, req.get('User-Agent'), { textLength: text.length }, { score: readability.score }, processingTime);
+    res.json({ success: true, data: { readability, sentiment, keywords, processingTime } });
+  } catch (error) {
+    logger.error('Readability checker error:', error);
+    res.status(500).json({ success: false, message: 'Failed to analyze text' });
+  }
+});
+
+// Content Repurposer
+router.post('/content-repurposer', [
+  body('text').isLength({ min: 50 }),
+  body('target').isIn(['tweet-thread','linkedin-post','tiktok-script','instagram-caption','blog-outline'])
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { text, target } = req.body;
+
+    let output = '';
+    if (process.env.ENABLE_LOCAL_AI === 'true') {
+      try {
+        const prompt = `Repurpose the following content into a ${target}. Keep it concise and structured with bullet points or numbered steps when helpful.\n\n${text}`;
+        output = await generateText(prompt, { category: 'general' }) || '';
+      } catch (e) {}
+    }
+    if (!output) {
+      // Template fallback
+      const sentences = text.split(/(?<=[.!?])\s+/).slice(0, 6);
+      if (target === 'tweet-thread') output = sentences.map((s, i) => `${i+1}/ ${s}`).join('\n');
+      else if (target === 'linkedin-post') output = `• ${sentences.join('\n• ')}\n\n#growth #productivity`;
+      else if (target === 'tiktok-script') output = `Hook: ${sentences[0]}\n\nSteps:\n${sentences.slice(1).map((s,i)=>`${i+1}. ${s}`).join('\n')}\n\nCTA: Follow for more!`;
+      else if (target === 'instagram-caption') output = `${sentences.slice(0,3).join(' ')}\n\n✨ Tips in bio #creator #ai`;
+      else output = `Outline:\n${sentences.map((s,i)=>`- Section ${i+1}: ${s}`).join('\n')}`;
+    }
+
+    const processingTime = Date.now() - start;
+    if (req.trackUsage) req.trackUsage('content-repurposer', req.user?.id, req.ip, req.get('User-Agent'), { target, textLength: text.length }, { outputLength: output.length }, processingTime);
+    res.json({ success: true, data: { target, output, processingTime } });
+  } catch (e) {
+    logger.error('Content repurposer error:', e);
+    res.status(500).json({ success: false, message: 'Failed to repurpose content' });
+  }
+});
+
+// Idea to Script Generator
+router.post('/idea-to-script', [
+  body('idea').isLength({ min: 10, max: 500 }),
+  body('platform').optional().isIn(['tiktok','youtube','reels','shorts','podcast'])
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { idea, platform = 'tiktok' } = req.body;
+
+    let script = '';
+    if (process.env.ENABLE_LOCAL_AI === 'true') {
+      try {
+        const prompt = `Turn this idea into a ${platform} script with Hook, Body (3-5 beats), and CTA. Keep it punchy.\nIdea: ${idea}`;
+        script = await generateText(prompt) || '';
+      } catch {}
+    }
+    if (!script) {
+      script = `Hook: ${idea}\n\nBeats:\n1) Problem\n2) Twist\n3) Solution\n4) Proof\n5) CTA\n\nCTA: Follow for more!`;
+    }
+
+    const processingTime = Date.now() - start;
+    if (req.trackUsage) req.trackUsage('idea-to-script', req.user?.id, req.ip, req.get('User-Agent'), { platform }, { length: script.length }, processingTime);
+    res.json({ success: true, data: { platform, script, processingTime } });
+  } catch (e) {
+    logger.error('Idea to script error:', e);
+    res.status(500).json({ success: false, message: 'Failed to generate script' });
+  }
+});
+
+// Social Hook Analyzer
+router.post('/social-hook-analyzer', [
+  body('hook').isLength({ min: 5, max: 280 })
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { hook } = req.body;
+    const sentiment = analyzeSentiment(hook);
+    const readability = await analyzeReadability(hook);
+    const patterns = {
+      question: /\?$/,
+      number: /\b\d+\b/,
+      shocking: /(secret|nobody|truth|shocking|exposed)/i,
+      tutorial: /(how to|step-by-step|guide)/i
+    };
+    const styles = Object.keys(patterns).filter(k => patterns[k].test(hook));
+    const score = Math.min(100, Math.max(20, 60 + (styles.length * 10) + (sentiment.score > 0 ? 10 : 0) - (readability.level.includes('Difficult') ? 10 : 0)));
+    const processingTime = Date.now() - start;
+    if (req.trackUsage) req.trackUsage('social-hook-analyzer', req.user?.id, req.ip, req.get('User-Agent'), { length: hook.length }, { score }, processingTime);
+    res.json({ success: true, data: { hook, styles, sentiment, readability, score, processingTime } });
+  } catch (e) {
+    logger.error('Social hook analyzer error:', e);
+    res.status(500).json({ success: false, message: 'Failed to analyze hook' });
+  }
+});
+
 // Helper functions
 const generateTemplateBlogIdeas = (niche, contentType, targetAudience, keywords, count) => {
   const templates = {
