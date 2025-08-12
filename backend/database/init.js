@@ -335,6 +335,22 @@ export const initializeDatabase = async () => {
       )
     `);
 
+    // Brand kits
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS brand_kits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        name TEXT NOT NULL,
+        colors_json TEXT,
+        fonts_json TEXT,
+        logo_url TEXT,
+        watermark_url TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
     // Create indexes for better performance
     await runSQL('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
     await runSQL('CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug)');

@@ -808,4 +808,85 @@ router.delete('/page-settings/:id', (req, res) => {
   }
 });
 
+// Brand kits
+router.get('/brand-kits', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM brand_kits WHERE user_id = ? ORDER BY updated_at DESC').all(req.user.id);
+    res.json({ success: true, brandKits: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch brand kits' });
+  }
+});
+
+router.post('/brand-kits', [ body('name').isLength({ min: 1 }) ], (req, res) => {
+  try {
+    const { name, colors = {}, fonts = {}, logo_url = '', watermark_url = '' } = req.body;
+    const r = db.prepare('INSERT INTO brand_kits (user_id, name, colors_json, fonts_json, logo_url, watermark_url) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(req.user.id, name, JSON.stringify(colors), JSON.stringify(fonts), logo_url, watermark_url);
+    res.status(201).json({ success: true, id: r.lastInsertRowid });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to create brand kit' });
+  }
+});
+
+router.put('/brand-kits/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body || {};
+    const setClause = Object.keys(updates).map(k => `${k === 'colors' ? 'colors_json' : k === 'fonts' ? 'fonts_json' : k} = ?`).join(', ');
+    const params = Object.entries(updates).map(([k, v]) => (k === 'colors' || k === 'fonts') ? JSON.stringify(v) : v);
+    params.push(new Date().toISOString(), id, req.user.id);
+    const result = db.prepare(`UPDATE brand_kits SET ${setClause}, updated_at = ? WHERE id = ? AND user_id = ?`).run(...params);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Brand kit not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to update brand kit' });
+  }
+});
+
+// Page blocks
+router.get('/page-blocks', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM page_blocks ORDER BY page_path, position').all();
+    res.json({ success: true, blocks: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch blocks' });
+  }
+});
+
+router.post('/page-blocks', [ body('page_path').isLength({ min: 1 }), body('block_type').isLength({ min: 1 }), body('config').isObject(), body('position').optional().isInt() ], (req, res) => {
+  try {
+    const { page_path, block_type, config, position = 0 } = req.body;
+    const r = db.prepare('INSERT INTO page_blocks (page_path, position, block_type, config_json) VALUES (?, ?, ?, ?)').run(page_path, position, block_type, JSON.stringify(config));
+    res.status(201).json({ success: true, id: r.lastInsertRowid });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to create block' });
+  }
+});
+
+router.put('/page-blocks/:id', [ body('config').optional().isObject(), body('position').optional().isInt() ], (req, res) => {
+  try {
+    const { id } = req.params; const updates = req.body;
+    const setClause = Object.keys(updates).map(k => `${k === 'config' ? 'config_json' : k} = ?`).join(', ');
+    const params = Object.entries(updates).map(([k, v]) => (k === 'config') ? JSON.stringify(v) : v);
+    params.push(new Date().toISOString(), id);
+    const result = db.prepare(`UPDATE page_blocks SET ${setClause}, updated_at = ? WHERE id = ?`).run(...params);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Block not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to update block' });
+  }
+});
+
+router.delete('/page-blocks/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = db.prepare('DELETE FROM page_blocks WHERE id = ?').run(id);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Block not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to delete block' });
+  }
+});
+
 export default router;
