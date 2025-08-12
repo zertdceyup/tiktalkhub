@@ -316,7 +316,12 @@ router.post('/invoice-maker', [
   body('clientInfo').isObject(),
   body('items').isArray({ min: 1 }),
   body('dueDate').isISO8601(),
-  body('notes').optional().isLength({ max: 500 })
+  body('notes').optional().isLength({ max: 500 }),
+  body('currency').optional().isIn(['USD','EUR','GBP','CAD','AUD','INR','JPY','CNY','ZAR','NGN','BRL','MXN']),
+  body('taxMode').optional().isIn(['exclusive','inclusive']),
+  body('discount').optional().isFloat({ min: 0, max: 100 }),
+  body('businessInfo.logoDataUrl').optional().isString(),
+  body('items.*.discount').optional().isFloat({ min: 0, max: 100 })
 ], async (req, res) => {
   const startTime = Date.now();
   
@@ -330,21 +335,60 @@ router.post('/invoice-maker', [
       });
     }
 
-    const { invoiceNumber, businessInfo, clientInfo, items, dueDate, notes = '' } = req.body;
+    const {
+      invoiceNumber,
+      businessInfo,
+      clientInfo,
+      items,
+      dueDate,
+      notes = '',
+      currency = 'USD',
+      taxMode = 'exclusive',
+      discount = 0
+    } = req.body;
 
-    // Calculate totals
-    let subtotal = 0;
-    const processedItems = items.map(item => {
-      const total = item.quantity * item.rate;
-      subtotal += total;
+    const currencySymbol = getCurrencySymbol(currency);
+
+    // Calculate totals with per-line and overall discounts and tax modes
+    let rawSubtotal = 0;
+    const processedItems = items.map((item) => {
+      const quantity = Number(item.quantity) || 0;
+      const rate = Number(item.rate) || 0;
+      const lineSubtotal = quantity * rate;
+      const lineDiscountPct = Number(item.discount) || 0; // percent
+      const lineDiscountAmount = lineSubtotal * (lineDiscountPct / 100);
+      const lineTotal = lineSubtotal - lineDiscountAmount;
+      rawSubtotal += lineTotal;
       return {
-        ...item,
-        total: total.toFixed(2)
+        description: item.description,
+        quantity,
+        rate: rate.toFixed(2),
+        discountPct: lineDiscountPct,
+        discountAmount: lineDiscountAmount.toFixed(2),
+        total: lineTotal.toFixed(2)
       };
     });
 
-    const tax = subtotal * (businessInfo.taxRate || 0) / 100;
-    const total = subtotal + tax;
+    // Apply overall discount (percent)
+    const overallDiscountPct = Number(discount) || 0;
+    const overallDiscountAmount = rawSubtotal * (overallDiscountPct / 100);
+    const subtotalAfterDiscount = rawSubtotal - overallDiscountAmount;
+
+    const taxRate = Number(businessInfo.taxRate || 0);
+    let tax = 0;
+    let preTaxSubtotal = subtotalAfterDiscount;
+    let grandTotal = 0;
+
+    if (taxMode === 'inclusive' && taxRate > 0) {
+      // Prices include tax already
+      preTaxSubtotal = subtotalAfterDiscount / (1 + taxRate / 100);
+      tax = subtotalAfterDiscount - preTaxSubtotal;
+      grandTotal = subtotalAfterDiscount;
+    } else {
+      // Exclusive tax
+      tax = subtotalAfterDiscount * (taxRate / 100);
+      grandTotal = subtotalAfterDiscount + tax;
+    }
 
     const invoiceData = {
       invoiceNumber,
@@ -353,9 +397,15 @@ router.post('/invoice-maker', [
       businessInfo,
       clientInfo,
       items: processedItems,
-      subtotal: subtotal.toFixed(2),
+      currency,
+      currencySymbol,
+      taxMode,
+      subtotal: preTaxSubtotal.toFixed(2),
+      discountPct: overallDiscountPct,
+      discountAmount: overallDiscountAmount.toFixed(2),
+      taxRate,
       tax: tax.toFixed(2),
-      total: total.toFixed(2),
+      total: grandTotal.toFixed(2),
       notes
     };
 
@@ -395,7 +445,7 @@ router.post('/invoice-maker', [
         req.ip,
         req.get('User-Agent'),
         { invoiceNumber, businessInfo, clientInfo, items: items.length },
-        { total, itemCount: items.length },
+        { total: grandTotal, itemCount: items.length },
         processingTime
       );
     }
@@ -406,6 +456,11 @@ router.post('/invoice-maker', [
         invoice: invoiceData,
         pdfGenerated: !!pdfBuffer,
         pdfUrl,
+        breakdown: {
+          rawSubtotal: rawSubtotal.toFixed(2),
+          overallDiscountPct: overallDiscountPct,
+          overallDiscountAmount: overallDiscountAmount.toFixed(2)
+        },
         processingTime
       }
     });
@@ -418,5 +473,12 @@ router.post('/invoice-maker', [
     });
   }
 });
+
+function getCurrencySymbol(code) {
+  const map = {
+    USD: '$', EUR: '€', GBP: '£', CAD: '$', AUD: '$', INR: '₹', JPY: '¥', CNY: '¥', ZAR: 'R', NGN: '₦', BRL: 'R$', MXN: '$'
+  };
+  return map[code] || '$';
+}
 
 export default router;

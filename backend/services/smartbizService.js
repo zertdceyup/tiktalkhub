@@ -227,6 +227,28 @@ export const createInvoicePDF = async (invoiceData) => {
       color: textColor
     });
 
+    // Optional logo (data URL base64)
+    if (invoiceData.businessInfo?.logoDataUrl) {
+      try {
+        const dataUrl = invoiceData.businessInfo.logoDataUrl;
+        const base64 = dataUrl.split(',')[1];
+        const bytes = Uint8Array.from(Buffer.from(base64, 'base64'));
+        let embeddedImage;
+        if (dataUrl.startsWith('data:image/png')) {
+          embeddedImage = await pdfDoc.embedPng(bytes);
+        } else {
+          embeddedImage = await pdfDoc.embedJpg(bytes);
+        }
+        const imgDims = embeddedImage.scale(0.25);
+        page.drawImage(embeddedImage, {
+          x: width - 200,
+          y: yPosition - imgDims.height - 5,
+          width: imgDims.width,
+          height: imgDims.height
+        });
+      } catch {}
+    }
+
     yPosition -= 60;
 
     // Business Info
@@ -341,7 +363,7 @@ export const createInvoicePDF = async (invoiceData) => {
     });
 
     page.drawText('Qty', {
-      x: 350,
+      x: 320,
       y: yPosition + 5,
       size: 10,
       font: boldFont,
@@ -349,7 +371,15 @@ export const createInvoicePDF = async (invoiceData) => {
     });
 
     page.drawText('Rate', {
-      x: 400,
+      x: 360,
+      y: yPosition + 5,
+      size: 10,
+      font: boldFont,
+      color: textColor
+    });
+
+    page.drawText('Disc%', {
+      x: 410,
       y: yPosition + 5,
       size: 10,
       font: boldFont,
@@ -387,22 +417,30 @@ export const createInvoicePDF = async (invoiceData) => {
       });
 
       page.drawText(item.quantity.toString(), {
-        x: 360,
+        x: 330,
         y: yPosition,
         size: 9,
         font: font,
         color: textColor
       });
 
-      page.drawText(`$${item.rate}`, {
-        x: 400,
+      page.drawText(`${invoiceData.currencySymbol}${item.rate}`, {
+        x: 370,
         y: yPosition,
         size: 9,
         font: font,
         color: textColor
       });
 
-      page.drawText(`$${item.total}`, {
+      page.drawText(`${(item.discountPct || 0).toFixed ? (item.discountPct).toFixed(0) : item.discountPct || 0}%`, {
+        x: 420,
+        y: yPosition,
+        size: 9,
+        font: font,
+        color: textColor
+      });
+
+      page.drawText(`${invoiceData.currencySymbol}${item.total}`, {
         x: 480,
         y: yPosition,
         size: 9,
@@ -416,7 +454,19 @@ export const createInvoicePDF = async (invoiceData) => {
     yPosition -= 20;
 
     // Totals
-    page.drawText(`Subtotal: $${invoiceData.subtotal}`, {
+    // Overall discount
+    if (invoiceData.discountPct && Number(invoiceData.discountPct) > 0) {
+      page.drawText(`Discount (${invoiceData.discountPct}%): -${invoiceData.currencySymbol}${invoiceData.discountAmount}`, {
+        x: 360,
+        y: yPosition,
+        size: 10,
+        font: font,
+        color: textColor
+      });
+      yPosition -= 20;
+    }
+
+    page.drawText(`Subtotal: ${invoiceData.currencySymbol}${invoiceData.subtotal}`, {
       x: 400,
       y: yPosition,
       size: 10,
@@ -426,7 +476,8 @@ export const createInvoicePDF = async (invoiceData) => {
 
     yPosition -= 20;
 
-    page.drawText(`Tax: $${invoiceData.tax}`, {
+    const taxLabel = invoiceData.taxMode === 'inclusive' ? 'Included Tax' : 'Tax';
+    page.drawText(`${taxLabel}: ${invoiceData.currencySymbol}${invoiceData.tax}`, {
       x: 400,
       y: yPosition,
       size: 10,
@@ -436,7 +487,7 @@ export const createInvoicePDF = async (invoiceData) => {
 
     yPosition -= 20;
 
-    page.drawText(`Total: $${invoiceData.total}`, {
+    page.drawText(`Total: ${invoiceData.currencySymbol}${invoiceData.total}`, {
       x: 400,
       y: yPosition,
       size: 12,

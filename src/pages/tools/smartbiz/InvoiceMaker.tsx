@@ -27,6 +27,17 @@ const InvoiceMaker: React.FC = () => {
   const [notes, setNotes] = useState<string>('Thank you for your business!');
   const [generatePDF, setGeneratePDF] = useState<boolean>(true);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<string>('USD');
+  const [taxMode, setTaxMode] = useState<'exclusive'|'inclusive'>('exclusive');
+  const [discount, setDiscount] = useState<number>(0);
+
+  const handleLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setBusinessInfo((b: any) => ({ ...b, logoDataUrl: reader.result }));
+    reader.readAsDataURL(file);
+  };
 
   const subtotal = useMemo(() => items.reduce((sum, it) => sum + (Number(it.quantity) || 0) * (Number(it.rate) || 0), 0), [items]);
   const tax = useMemo(() => subtotal * ((Number(businessInfo.taxRate) || 0) / 100), [subtotal, businessInfo.taxRate]);
@@ -56,7 +67,7 @@ const InvoiceMaker: React.FC = () => {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/tools/smartbiz/invoice-maker`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invoiceNumber, businessInfo, clientInfo, items, dueDate, notes, generatePDF: true })
+        body: JSON.stringify({ invoiceNumber, businessInfo, clientInfo, items, dueDate, notes, generatePDF: true, currency, taxMode, discount })
       });
       const json = await res.json();
       if (!json.success) throw new Error(json.message || 'Failed to generate PDF');
@@ -110,6 +121,26 @@ const InvoiceMaker: React.FC = () => {
                         <Input type="number" value={businessInfo.taxRate}
                           onChange={e => setBusinessInfo({ ...businessInfo, taxRate: Number(e.target.value) })} />
                       </div>
+                      <div className="space-y-2">
+                        <Label>Currency</Label>
+                        <select className="w-full h-10 rounded-md border bg-background px-3" value={currency} onChange={e => setCurrency(e.target.value)}>
+                          {['USD','EUR','GBP','CAD','AUD','INR','JPY','CNY','ZAR','NGN','BRL','MXN'].map(c => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Tax Mode</Label>
+                        <select className="w-full h-10 rounded-md border bg-background px-3" value={taxMode} onChange={e => setTaxMode(e.target.value as any)}>
+                          <option value="exclusive">Exclusive</option>
+                          <option value="inclusive">Inclusive</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Overall Discount (%)</Label>
+                        <Input type="number" min={0} max={100} value={discount}
+                          onChange={e => setDiscount(Number(e.target.value))} />
+                      </div>
                     </div>
 
                     <div className="grid md:grid-cols-2 gap-6">
@@ -121,6 +152,13 @@ const InvoiceMaker: React.FC = () => {
                         <div className="grid grid-cols-2 gap-3">
                           <Input placeholder="Email" value={businessInfo.email} onChange={e => setBusinessInfo({ ...businessInfo, email: e.target.value })} />
                           <Input placeholder="Phone" value={businessInfo.phone} onChange={e => setBusinessInfo({ ...businessInfo, phone: e.target.value })} />
+                        </div>
+                        <div className="space-y-1">
+                          <Label>Logo (optional)</Label>
+                          <Input type="file" accept="image/*" onChange={handleLogo} />
+                          {businessInfo.logoDataUrl && (
+                            <img src={businessInfo.logoDataUrl} alt="logo" className="h-12 mt-2 object-contain" />
+                          )}
                         </div>
                       </div>
                       <div className="space-y-2">
@@ -151,8 +189,12 @@ const InvoiceMaker: React.FC = () => {
                               <Input type="number" min={0} step="0.01" placeholder="Rate" value={it.rate}
                                 onChange={e => updateItem(idx, { rate: Number(e.target.value) })} />
                             </div>
+                            <div className="col-span-1">
+                              <Input type="number" min={0} max={100} placeholder="Disc%" value={(it as any).discount || 0}
+                                onChange={e => updateItem(idx, { discount: Number(e.target.value) } as any)} />
+                            </div>
                             <div className="col-span-1 text-right font-medium">
-                              ${(it.quantity * it.rate).toFixed(2)}
+                              ${(it.quantity * it.rate * (1 - ((it as any).discount || 0)/100)).toFixed(2)}
                             </div>
                             <div className="col-span-1 text-right">
                               <Button variant="ghost" size="icon" onClick={() => removeItem(idx)} aria-label="Remove">
@@ -174,8 +216,14 @@ const InvoiceMaker: React.FC = () => {
                           <span>Subtotal</span>
                           <span>${subtotal.toFixed(2)}</span>
                         </div>
+                        {discount > 0 && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span>Discount ({discount}%)</span>
+                            <span>-${(subtotal * (discount/100)).toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="flex items-center justify-between text-sm">
-                          <span>Tax</span>
+                          <span>{taxMode === 'inclusive' ? 'Included Tax' : 'Tax'}</span>
                           <span>${tax.toFixed(2)}</span>
                         </div>
                         <div className="flex items-center justify-between font-semibold text-lg">
