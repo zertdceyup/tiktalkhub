@@ -53,6 +53,10 @@ import BatchTrimmer from "./pages/tools/video/BatchTrimmer";
 import ThumbnailOptimizer from "./pages/tools/video/ThumbnailOptimizer";
 import SmartCaptionGenerator from "./pages/tools/video/SmartCaptionGenerator";
 import QRCodeGenerator from "./pages/tools/utility/QRCodeGenerator";
+import ImageRemixer from "./pages/tools/general/ImageRemixer";
+import TwitterThreadPreviewer from "./pages/tools/general/TwitterThreadPreviewer";
+import TextSummarizer from "./pages/tools/content/TextSummarizer";
+import VoiceNotesToText from "./pages/tools/content/VoiceNotesToText";
 import ImageOptimizer from "./pages/tools/utility/ImageOptimizer";
 import PDFMerger from "./pages/tools/utility/PDFMerger";
 import TwitterThreadFormatter from "./pages/tools/social/TwitterThreadFormatter";
@@ -138,6 +142,10 @@ const App = () => (
           <Route path="/tools/content/text-to-speech" element={<TextToSpeech />} />
           <Route path="/tools/pdf" element={<PDF />} />
           <Route path="/tools/utility/qr-code-generator" element={<QRCodeGenerator />} />
+           <Route path="/tools/general/image-remixer" element={<ImageRemixer />} />
+           <Route path="/tools/general/twitter-thread-previewer" element={<TwitterThreadPreviewer />} />
+           <Route path="/tools/content/text-summarizer" element={<TextSummarizer />} />
+           <Route path="/tools/content/voice-notes-to-text" element={<VoiceNotesToText />} />
           <Route path="/tools/utility/image-optimizer" element={<ImageOptimizer />} />
           <Route path="/tools/utility/pdf-merger" element={<PDFMerger />} />
           <Route path="/tools/utility/youtube-thumbnail-downloader" element={<YouTubeThumbnailDownloader />} />

@@ -2,8 +2,19 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import logger from '../../utils/logger.js';
 import { generateText, analyzeSentiment, extractKeywords, analyzeReadability } from '../../services/aiService.js';
+import multer from 'multer';
 
 const router = express.Router();
+
+const audioStorage = multer.memoryStorage();
+const uploadAudio = multer({
+  storage: audioStorage,
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = ['audio/mpeg','audio/mp3','audio/wav','audio/x-wav','audio/webm','audio/ogg','audio/m4a'].includes(file.mimetype);
+    if (ok) cb(null, true); else cb(new Error('Invalid audio type'));
+  }
+});
 
 // Blog Idea Generator
 router.post('/blog-idea-generator', [
@@ -364,6 +375,63 @@ router.post('/text-to-speech', [
       success: false,
       message: 'Failed to convert text to speech'
     });
+  }
+});
+
+// Text Summarizer
+router.post('/text-summarizer', [
+  body('text').isLength({ min: 50 }),
+  body('length').optional().isIn(['short','medium','long'])
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { text, length = 'medium' } = req.body;
+
+    let summary = '';
+    if (process.env.ENABLE_LOCAL_AI === 'true') {
+      try {
+        const prompt = `Summarize the following text in a ${length} length with bullet key points.\n\n${text}`;
+        summary = (await generateText(prompt)) || '';
+      } catch (e) {}
+    }
+    if (!summary) {
+      const sentences = text.split(/(?<=[.!?])\s+/).slice(0, length === 'short' ? 2 : length === 'medium' ? 4 : 6);
+      summary = sentences.join(' ');
+    }
+
+    const keywords = extractKeywords(text, 10);
+
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('text-summarizer', req.user?.id, req.ip, req.get('User-Agent'), { length, textLength: text.length }, { keywordCount: keywords.length }, processingTime);
+    res.json({ success: true, data: { summary, keywords, processingTime } });
+  } catch (error) {
+    logger.error('Text summarizer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to summarize text' });
+  }
+});
+
+// Voice Notes to Text (mock STT)
+router.post('/voice-notes-to-text', uploadAudio.single('audio'), [
+  body('language').optional().isIn(['en','es','fr','de','it'])
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No audio file provided' });
+    const { language = 'en' } = req.body;
+
+    // Mock transcript
+    const transcript = `This is a mock transcription of your voice note (${req.file.originalname}).`;
+    const wordCount = Math.floor(req.file.size / 2000) + 20;
+    const confidence = 0.9;
+
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('voice-notes-to-text', req.user?.id, req.ip, req.get('User-Agent'), { language, size: req.file.size }, { wordCount }, processingTime);
+    res.json({ success: true, data: { transcript, language, confidence, wordCount, processingTime, note: 'Demo transcription. Integrate local ASR for production.' } });
+  } catch (error) {
+    logger.error('Voice notes to text error:', error);
+    res.status(500).json({ success: false, message: 'Failed to transcribe audio' });
   }
 });
 

@@ -674,6 +674,27 @@ class ApiClient {
     return this.request('/tools/video/thumbnail-optimizer', { method: 'POST', body: formData, headers: {} });
   }
 
+  async remixImage(data: { file: File; effect?: 'grayscale'|'sepia'|'blur'|'pixelate'|'invert'|'none'; intensity?: number; hue?: number; saturation?: number }): Promise<ApiResponse<{ remixed: string; processingTime: number; meta: any }>> {
+    const formData = new FormData();
+    formData.append('image', data.file);
+    if (data.effect) formData.append('effect', data.effect);
+    if (data.intensity !== undefined) formData.append('intensity', String(data.intensity));
+    if (data.hue !== undefined) formData.append('hue', String(data.hue));
+    if (data.saturation !== undefined) formData.append('saturation', String(data.saturation));
+    return this.request('/tools/utility/image-remixer', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async summarizeText(data: { text: string; length?: 'short'|'medium'|'long' }): Promise<ApiResponse<{ summary: string; keywords: string[]; processingTime: number }>> {
+    return this.request('/tools/content/text-summarizer', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async voiceNotesToText(data: { file: File; language?: 'en'|'es'|'fr'|'de'|'it' }): Promise<ApiResponse<{ transcript: string; language: string; confidence: number; wordCount: number; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('audio', data.file);
+    if (data.language) formData.append('language', data.language);
+    return this.request('/tools/content/voice-notes-to-text', { method: 'POST', body: formData, headers: {} });
+  }
+
   // AI endpoints
   async chatWithTiko(data: {
     message: string;

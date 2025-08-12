@@ -18,39 +18,45 @@ const GeneralTools = () => {
       description: "Download high-quality thumbnails from any YouTube video",
       icon: Download,
       features: ["HD quality", "Multiple formats", "Instant download"],
-      popular: true
+      popular: true,
+      route: "/tools/utility/youtube-thumbnail-downloader"
     },
     {
       name: "Twitter Thread Previewer",
       description: "Preview how your Twitter thread will look before posting",
       icon: FileText,
-      features: ["Real-time preview", "Character count", "Thread formatting"]
+      features: ["Real-time preview", "Character count", "Thread formatting"],
+      route: "/tools/general/twitter-thread-previewer"
     },
     {
       name: "Image Remixer",
       description: "Transform and remix images with AI-powered effects",
       icon: Upload,
       features: ["AI-powered", "Multiple styles", "Batch processing"],
-      popular: true
+      popular: true,
+      route: "/tools/general/image-remixer"
     },
     {
       name: "Text Summarizer",
       description: "Condense long texts into key points instantly",
       icon: FileText,
-      features: ["AI summarization", "Key points extraction", "Multiple lengths"]
+      features: ["AI summarization", "Key points extraction", "Multiple lengths"],
+      route: "/tools/content/text-summarizer"
     },
     {
       name: "Voice Notes to Text",
       description: "Convert voice recordings to accurate text transcriptions",
       icon: Search,
       features: ["High accuracy", "Multiple languages", "Fast processing"],
-      popular: true
+      popular: true,
+      route: "/tools/content/voice-notes-to-text"
     },
     {
       name: "QR Code Generator",
       description: "Create custom QR codes for any purpose",
       icon: QrCode,
-      features: ["Custom designs", "Multiple formats", "Bulk generation"]
+      features: ["Custom designs", "Multiple formats", "Bulk generation"],
+      route: "/tools/utility/qr-code-generator"
     }
   ];
 
@@ -179,7 +185,7 @@ const GeneralTools = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant="outline">
+                  <Button className="w-full" variant="outline" onClick={() => (tool as any).route ? window.location.assign((tool as any).route) : null}>
                     Try Now
                   </Button>
                 </CardContent>

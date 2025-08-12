@@ -353,6 +353,9 @@ export const initializeDatabase = async () => {
       // Utility Tools
       { name: 'PDF Compressor', slug: 'pdf-compressor', category: 'utility', description: 'Compress PDF files', icon: '📄' },
       { name: 'QR Code Generator', slug: 'qr-generator', category: 'utility', description: 'Generate QR codes', icon: '📱' },
+      { name: 'Image Remixer', slug: 'image-remixer', category: 'utility', description: 'Apply effects to images', icon: '🖼️' },
+      { name: 'Text Summarizer', slug: 'text-summarizer', category: 'content', description: 'Summarize long text', icon: '📝' },
+      { name: 'Voice Notes to Text', slug: 'voice-notes-to-text', category: 'content', description: 'Transcribe audio to text', icon: '🎙️' }
       { name: 'Image Optimizer', slug: 'image-optimizer', category: 'utility', description: 'Optimize images', icon: '🖼️' },
       { name: 'AI Meme Generator', slug: 'ai-meme-generator', category: 'utility', description: 'Generate memes with AI', icon: '😂' }
     ];

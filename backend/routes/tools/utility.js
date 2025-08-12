@@ -694,6 +694,54 @@ router.post('/pdf-to-image', upload.single('pdf'), async (req, res) => {
   }
 });
 
+// Image Remixer
+router.post('/image-remixer', upload.single('image'), [
+  body('effect').optional().isIn(['grayscale','sepia','blur','pixelate','invert','none']),
+  body('intensity').optional().isInt({ min: 1, max: 20 }),
+  body('hue').optional().isInt({ min: -180, max: 180 }),
+  body('saturation').optional().isInt({ min: -100, max: 100 })
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image file provided' });
+    }
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { effect = 'none', intensity = 5, hue = 0, saturation = 0 } = req.body;
+    const image = await Jimp.read(req.file.buffer);
+
+    switch (effect) {
+      case 'grayscale': image.grayscale(); break;
+      case 'sepia': image.sepia(); break;
+      case 'blur': image.blur(parseInt(intensity)); break;
+      case 'pixelate': image.pixelate(parseInt(intensity)); break;
+      case 'invert': image.invert(); break;
+      default: break;
+    }
+
+    if (hue) image.color([{ apply: 'hue', params: [parseInt(hue)] }]);
+    if (saturation) image.color([{ apply: 'saturate', params: [parseInt(saturation)] }]);
+
+    const outBuffer = await image.getBufferAsync(Jimp.MIME_JPEG);
+    const dataUrl = `data:image/jpeg;base64,${outBuffer.toString('base64')}`;
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage('image-remixer', req.user?.id, req.ip, req.get('User-Agent'), { effect, intensity, hue, saturation }, { size: outBuffer.length }, processingTime);
+    }
+
+    res.json({ success: true, data: { remixed: dataUrl, processingTime, meta: { width: image.bitmap.width, height: image.bitmap.height, effect } } });
+  } catch (error) {
+    logger.error('Image remixer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to remix image' });
+  }
+});
+
 function extractYouTubeId(input) {
   if (!input) return null;
   const str = String(input).trim();
