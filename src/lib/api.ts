@@ -459,6 +459,53 @@ class ApiClient {
     });
   }
 
+  async generateFacebookCaption(data: {
+    topic: string;
+    tone?: 'professional' | 'casual' | 'engaging' | 'promotional';
+    includeEmojis?: boolean;
+    callToAction?: string;
+  }): Promise<ApiResponse<{ caption: string; processingTime: number }>> {
+    return this.request('/tools/social/facebook-caption-creator', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // TikTok tools
+  async tiktokHashtagHeatmap(data: {
+    hashtags: string[];
+    timeframe?: '24h' | '7d' | '30d';
+  }): Promise<ApiResponse<{ timeframe: string; heatmapData: any[]; processingTime: number }>> {
+    return this.request('/tools/tiktok/hashtag-heatmap', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async tiktokViralHookGenerator(data: {
+    topic: string;
+    style?: 'question' | 'shocking' | 'storytelling' | 'tutorial' | 'trend';
+    count?: number;
+  }): Promise<ApiResponse<{ topic: string; style: string; hooks: any[]; processingTime: number }>> {
+    return this.request('/tools/tiktok/viral-hook-generator', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  // Emotional tools
+  async mindMirror(data: { journalEntry: string; mood?: 'happy' | 'sad' | 'anxious' | 'excited' | 'angry' | 'calm' | 'stressed' | 'neutral' }): Promise<ApiResponse<{ originalEntry: string; sentiment: any; mood?: string; reflection: string; suggestions: string[]; processingTime: number }>> {
+    return this.request('/tools/emotional/mindmirror', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async therapet(data: { currentMood: 'happy' | 'sad' | 'anxious' | 'excited' | 'angry' | 'calm' | 'stressed' | 'neutral'; petType?: 'cat' | 'dog' | 'bird' | 'fish' | 'hamster'; interaction?: 'feed' | 'play' | 'pet' | 'talk' | 'exercise' }): Promise<ApiResponse<{ pet: any; interaction: string; response: string; moodBoost: number; processingTime: number }>> {
+    return this.request('/tools/emotional/therapet', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async moodboardAI(data: { colors: string[]; images?: string[]; description?: string }): Promise<ApiResponse<{ moodAnalysis: any; recommendations: any; processingTime: number }>> {
+    return this.request('/tools/emotional/moodboard-ai', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // Utility tools
   async compressPDF(data: {
     file: File;
