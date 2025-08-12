@@ -499,6 +499,69 @@ router.post('/batch-trimmer', upload.array('videos', 10), [
   }
 });
 
+router.post('/thumbnail-optimizer', upload.single('video'), [
+  body('count').optional().isInt({ min: 1, max: 12 }),
+  body('title').optional().isString(),
+  body('style').optional().isIn(['clean','bold','minimal','vibrant']),
+  body('colorScheme').optional().isString(),
+  body('addBorder').optional().isBoolean(),
+  body('badgeText').optional().isString()
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file provided' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { count = 6, title = '', style = 'bold', colorScheme = 'red', addBorder = false, badgeText = '' } = req.body;
+
+    const candidates = [];
+    const videoDuration = 120; // mock seconds
+    for (let i = 0; i < Number(count); i++) {
+      const timestamp = Math.round((videoDuration / Number(count)) * i);
+      const score = Math.round(60 + Math.random() * 40); // 60-100 mock CTR score
+      const textColor = style === 'bold' ? '#ffffff' : '#111111';
+      const bgColor = colorScheme === 'red' ? '#E11D48' : colorScheme === 'blue' ? '#2563EB' : '#16A34A';
+      candidates.push({
+        id: i + 1,
+        timestamp,
+        url: `/api/thumbnails/optimized-${Date.now()}-${i}.jpg`,
+        score,
+        overlay: { title, style, textColor, bgColor, addBorder: addBorder === true || addBorder === 'true', badgeText },
+        recommended: {
+          textPosition: i % 2 === 0 ? 'top' : 'bottom',
+          safeZone: { top: 0.1, bottom: 0.15, left: 0.05, right: 0.05 }
+        },
+        size: { width: 1280, height: 720 }
+      });
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage(
+        'thumbnail-optimizer',
+        req.user?.id,
+        req.ip,
+        req.get('User-Agent'),
+        { videoSize: req.file.size, count: Number(count), style, colorScheme },
+        { candidates: candidates.length, topScore: Math.max(...candidates.map(c => c.score)) },
+        processingTime
+      );
+    }
+
+    res.json({ success: true, data: { video: { name: req.file.originalname, size: req.file.size }, candidates, processingTime, note: 'Demo implementation. In production, frames would be extracted and styled overlays applied.' } });
+  } catch (error) {
+    logger.error('Thumbnail optimizer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to optimize thumbnails' });
+  }
+});
+
 function formatSrtTime(seconds) {
   const s = Number(seconds) || 0;
   const hh = String(Math.floor(s / 3600)).padStart(2, '0');

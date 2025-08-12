@@ -50,6 +50,7 @@ import GifMaker from "./pages/tools/video/GifMaker";
 import ShortsVerticalCropper from "./pages/tools/video/ShortsVerticalCropper";
 import NoiseRemover from "./pages/tools/video/NoiseRemover";
 import BatchTrimmer from "./pages/tools/video/BatchTrimmer";
+import ThumbnailOptimizer from "./pages/tools/video/ThumbnailOptimizer";
 import QRCodeGenerator from "./pages/tools/utility/QRCodeGenerator";
 import ImageOptimizer from "./pages/tools/utility/ImageOptimizer";
 import PDFMerger from "./pages/tools/utility/PDFMerger";
@@ -107,6 +108,7 @@ const App = () => (
           <Route path="/tools/video" element={<VideoTools />} />
           <Route path="/tools/video/trimmer" element={<VideoTrimmer />} />
           <Route path="/tools/video/thumbnail-selector" element={<ThumbnailSelector />} />
+            <Route path="/tools/video/thumbnail-optimizer" element={<ThumbnailOptimizer />} />
             <Route path="/tools/video/gif-maker" element={<GifMaker />} />
             <Route path="/tools/video/batch-trimmer" element={<BatchTrimmer />} />
 <Route path="/tools/video/shorts-vertical-cropper" element={<ShortsVerticalCropper />} />

@@ -329,6 +329,7 @@ export const initializeDatabase = async () => {
       // Video Tools
       { name: 'Video Trimmer', slug: 'video-trimmer', category: 'video', description: 'Trim video files', icon: '✂️' },
       { name: 'Thumbnail Selector', slug: 'thumbnail-selector', category: 'video', description: 'Extract video thumbnails', icon: '🖼️' },
+      { name: 'Thumbnail Optimizer', slug: 'thumbnail-optimizer', category: 'video', description: 'Create CTR-optimized thumbnails', icon: '🖼️' },
       { name: 'GIF Maker', slug: 'gif-maker', category: 'video', description: 'Create GIFs from videos', icon: '🎬' },
       { name: 'Shorts Vertical Cropper', slug: 'shorts-vertical-cropper', category: 'video', description: 'Auto-crop landscape videos to vertical formats', icon: '📱' },
       { name: 'Noise Remover', slug: 'noise-remover', category: 'video', description: 'Clean audio with noise reduction', icon: '🔇' },

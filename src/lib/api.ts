@@ -654,6 +654,18 @@ class ApiClient {
     return this.request('/tools/utility/pdf-to-image', { method: 'POST', body: formData, headers: {} });
   }
 
+  async optimizeThumbnails(data: { file: File; count?: number; title?: string; style?: 'clean'|'bold'|'minimal'|'vibrant'; colorScheme?: string; addBorder?: boolean; badgeText?: string }): Promise<ApiResponse<{ video: any; candidates: any[]; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.count !== undefined) formData.append('count', String(data.count));
+    if (data.title) formData.append('title', data.title);
+    if (data.style) formData.append('style', data.style);
+    if (data.colorScheme) formData.append('colorScheme', data.colorScheme);
+    if (data.addBorder !== undefined) formData.append('addBorder', String(data.addBorder));
+    if (data.badgeText) formData.append('badgeText', data.badgeText);
+    return this.request('/tools/video/thumbnail-optimizer', { method: 'POST', body: formData, headers: {} });
+  }
+
   // AI endpoints
   async chatWithTiko(data: {
     message: string;
