@@ -37,6 +37,7 @@ import SmartFlyerDesigner from "./pages/tools/smartbiz/SmartFlyerDesigner";
 import ResumeBuilder from "./pages/tools/career/ResumeBuilder";
 import CoverLetterAI from "./pages/tools/career/CoverLetterAI";
 import LinkedInSummary from "./pages/tools/career/LinkedInSummary";
+import InterviewCoach from "./pages/tools/career/InterviewCoach";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +72,7 @@ const App = () => (
           <Route path="/tools/career/resume-builder" element={<ResumeBuilder />} />
           <Route path="/tools/career/cover-letter-ai" element={<CoverLetterAI />} />
           <Route path="/tools/career/linkedin-summary" element={<LinkedInSummary />} />
+          <Route path="/tools/career/interview-coach" element={<InterviewCoach />} />
           <Route path="/tools/video" element={<VideoTools />} />
           <Route path="/tools/social" element={<SocialTools />} />
           <Route path="/tools/general" element={<General />} />
