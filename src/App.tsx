@@ -92,6 +92,7 @@ const AdminTools = React.lazy(() => import('./pages/admin/Tools'));
 const AdminTemplates = React.lazy(() => import('./pages/admin/Templates'));
 const AdminTikoConfig = React.lazy(() => import('./pages/admin/TikoConfig'));
 const AdminPageBuilder = React.lazy(() => import('./pages/admin/PageBuilder'));
+const AdminFAQs = React.lazy(() => import('./pages/admin/FAQs'));
 import ThemeTokens from "./components/ThemeTokens";
 import PageRenderer from "./components/PageRenderer";
 
@@ -174,6 +175,7 @@ const App = () => (
           <Route path="/admin/templates" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminTemplates /></React.Suspense>} />
           <Route path="/admin/tiko" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminTikoConfig /></React.Suspense>} />
           <Route path="/admin/page-builder" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminPageBuilder /></React.Suspense>} />
+          <Route path="/admin/faqs" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><AdminFAQs /></React.Suspense>} />
           
           {/* Tool Categories */}
           <Route path="/tools/smartbiz" element={<SmartBiz />} />
