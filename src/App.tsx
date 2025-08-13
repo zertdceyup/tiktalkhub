@@ -89,6 +89,7 @@ const AdminTools = React.lazy(() => import('./pages/admin/Tools'));
 const AdminTemplates = React.lazy(() => import('./pages/admin/Templates'));
 const AdminTikoConfig = React.lazy(() => import('./pages/admin/TikoConfig'));
 import ThemeTokens from "./components/ThemeTokens";
+import PageRenderer from "./components/PageRenderer";
 
 const queryClient = new QueryClient();
 
@@ -100,6 +101,7 @@ const App = () => (
         <Sonner />
                  <BrowserRouter>
            <CMPBanner />
+           <PageRenderer />
          <ThemeTokens>
          <Routes>
           <Route path="/" element={<Index />} />

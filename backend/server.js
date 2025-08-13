@@ -162,13 +162,39 @@ app.get('/api/og-image', async (req, res) => {
 // Public settings (read-only subset)
 app.get('/api/public/settings', async (req, res) => {
   try {
-    const rows = await allSQL('SELECT key, value, category FROM admin_settings WHERE key IN ("site_name","site_description","enable_ai_features","enable_local_ai","tiko_persona","tiko_suggestions_enabled")');
+    const rows = await allSQL('SELECT key, value, category FROM admin_settings WHERE key IN ("site_name","site_description","enable_ai_features","enable_local_ai","tiko_persona","tiko_suggestions_enabled","posts_home_count","posts_sidebar_count","ad_header_code","ad_footer_code")');
     const settings = rows.reduce((acc, r) => { acc[r.key] = r.value; return acc; }, {});
     res.json({ success: true, settings });
   } catch (e) {
     res.status(500).json({ success: false, message: 'Failed to fetch public settings' });
   }
 });
+
+// Public page blocks
+app.get('/api/public/page-blocks', async (req, res) => {
+  try {
+    const path = req.query.path || '';
+    const sql = path ? 'SELECT * FROM page_blocks WHERE page_path = ? ORDER BY position' : 'SELECT * FROM page_blocks ORDER BY page_path, position';
+    const rows = await allSQL(sql, path ? [path] : []);
+    res.json({ success: true, blocks: rows.map(b => ({ ...b, config: safeParse(b.config_json) })) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch blocks' });
+  }
+});
+
+// Public brand kit (simple: latest kit)
+app.get('/api/public/brand-kit', async (req, res) => {
+  try {
+    const rows = await allSQL('SELECT * FROM brand_kits ORDER BY updated_at DESC LIMIT 1');
+    const kit = rows[0] || null;
+    if (!kit) return res.json({ success: true, kit: null });
+    res.json({ success: true, kit: { id: kit.id, name: kit.name, colors: safeParse(kit.colors_json), fonts: safeParse(kit.fonts_json), logo_url: kit.logo_url, watermark_url: kit.watermark_url } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch brand kit' });
+  }
+});
+
+function safeParse(s) { try { return JSON.parse(s || '{}'); } catch { return {}; } }
 
 // API routes
 app.use('/api/auth', authRoutes);
