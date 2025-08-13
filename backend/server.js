@@ -194,6 +194,18 @@ app.get('/api/public/brand-kit', async (req, res) => {
   }
 });
 
+// Public blog curation
+app.get('/api/public/blog-curation', async (req, res) => {
+  try {
+    const context = String(req.query.context || '');
+    if (!context) return res.json({ success: true, rules: [] });
+    const rows = await allSQL('SELECT * FROM blog_curation WHERE context = ? ORDER BY updated_at DESC', [context]);
+    res.json({ success: true, rules: rows.map(r => ({ id: r.id, context: r.context, rule: safeParse(r.rule_json) })) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch curation' });
+  }
+});
+
 function safeParse(s) { try { return JSON.parse(s || '{}'); } catch { return {}; } }
 
 // API routes
