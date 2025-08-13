@@ -838,6 +838,14 @@ class ApiClient {
     return this.request(`/blog/${slug}`);
   }
 
+  // RAG
+  async ragUpsert(doc: { doc_type: string; doc_id: string; content: string }): Promise<ApiResponse<any>> { return this.request('/ai/rag/upsert', { method: 'POST', body: JSON.stringify(doc) }); }
+  async ragSearch(query: string, limit?: number): Promise<ApiResponse<{ results: any[] }>> { return this.request('/ai/rag/search', { method: 'POST', body: JSON.stringify({ query, limit }) }); }
+
+  // Projects autosave
+  async createProject(name: string, data: any): Promise<ApiResponse<{ id: number }>> { return this.request('/tools/projects', { method: 'POST', body: JSON.stringify({ name, data }) }); }
+  async updateProject(id: number, data: any): Promise<ApiResponse<any>> { return this.request(`/tools/projects/${id}`, { method: 'PUT', body: JSON.stringify({ data }) }); }
+
   async generateBlogContent(data: {
     topic: string;
     keywords?: string[];
