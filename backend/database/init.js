@@ -518,6 +518,16 @@ export const initializeDatabase = async () => {
       );
     `);
 
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS faqs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_path TEXT NOT NULL,
+        items_json TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     logger.info('✅ Database initialized successfully');
     return { db, runSQL, getSQL, allSQL };
 

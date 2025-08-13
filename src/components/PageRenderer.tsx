@@ -4,12 +4,18 @@ import { useLocation } from 'react-router-dom';
 const PageRenderer: React.FC = () => {
   const { pathname } = useLocation();
   const [blocks, setBlocks] = useState<any[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
       const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/public/page-blocks?path=${encodeURIComponent(pathname)}`);
       const json = await res.json();
       setBlocks(json.blocks || []);
+    })();
+    (async () => {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/public/faqs?path=${encodeURIComponent(pathname)}`);
+      const j = await res.json();
+      setFaqs(j.faqs || []);
     })();
   }, [pathname]);
 
@@ -75,8 +81,25 @@ const PageRenderer: React.FC = () => {
     }
   };
 
-  if (!blocks.length) return null;
-  return <>{blocks.map(renderBlock)}</>;
+  if (!blocks.length && !faqs.length) return null;
+  return <>
+    {blocks.map(renderBlock)}
+    {faqs.length > 0 && (
+      <section className="py-12">
+        <div className="container mx-auto px-6">
+          <h2 className="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
+          <div className="space-y-4">
+            {faqs.map((f: any, i: number) => (
+              <div key={i} className="border rounded p-4">
+                <div className="font-medium">{f.q}</div>
+                <div className="text-sm text-muted-foreground">{f.a}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+  </>;
 };
 
 export default PageRenderer;

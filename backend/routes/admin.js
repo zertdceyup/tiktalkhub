@@ -808,6 +808,27 @@ router.delete('/page-settings/:id', (req, res) => {
   }
 });
 
+// FAQs CRUD
+router.get('/faqs', (req, res) => {
+  const rows = db.prepare('SELECT * FROM faqs ORDER BY updated_at DESC').all();
+  res.json({ success: true, faqs: rows });
+});
+router.post('/faqs', [ body('page_path').isString(), body('items').isArray({ min: 1 }) ], (req, res) => {
+  const { page_path, items } = req.body;
+  const r = db.prepare('INSERT INTO faqs (page_path, items_json) VALUES (?, ?)').run(page_path, JSON.stringify(items));
+  res.status(201).json({ success: true, id: r.lastInsertRowid });
+});
+router.put('/faqs/:id', [ body('items').isArray({ min: 1 }) ], (req, res) => {
+  const { id } = req.params; const { items } = req.body;
+  db.prepare('UPDATE faqs SET items_json = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(items), new Date().toISOString(), id);
+  res.json({ success: true });
+});
+router.delete('/faqs/:id', (req, res) => {
+  const { id } = req.params;
+  db.prepare('DELETE FROM faqs WHERE id = ?').run(id);
+  res.json({ success: true });
+});
+
 // Brand kits
 router.get('/brand-kits', (req, res) => {
   try {

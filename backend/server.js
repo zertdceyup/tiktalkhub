@@ -220,6 +220,17 @@ app.get('/api/public/blog-curation', async (req, res) => {
   }
 });
 
+// Public FAQs per page
+app.get('/api/public/faqs', async (req, res) => {
+  try {
+    const pagePath = String(req.query.path || '');
+    if (!pagePath) return res.json({ success: true, faqs: [] });
+    const rows = await allSQL('SELECT * FROM faqs WHERE page_path = ? ORDER BY updated_at DESC LIMIT 1', [pagePath]);
+    const items = rows[0]?.items_json ? JSON.parse(rows[0].items_json) : [];
+    res.json({ success: true, faqs: items });
+  } catch (e) { res.status(500).json({ success: false, message: 'Failed to fetch FAQs' }); }
+});
+
 function safeParse(s) { try { return JSON.parse(s || '{}'); } catch { return {}; } }
 
 // API routes
