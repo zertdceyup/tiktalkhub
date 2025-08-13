@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import AdSlot from '@/components/AdSlot';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const VideoTools = () => {
   const tools = [
@@ -63,50 +64,7 @@ const VideoTools = () => {
     }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "Video SEO: Rank Higher on YouTube",
-      excerpt: "Optimize your videos for search with these proven techniques that top creators use.",
-      readTime: "9 min",
-      trending: true
-    },
-    {
-      id: 2,
-      title: "Creating Viral TikTok Content",
-      excerpt: "Master the art of short-form video content that captures attention and goes viral.",
-      readTime: "7 min",
-      trending: false
-    },
-    {
-      id: 3,
-      title: "Audio Quality Tips for Creators",
-      excerpt: "Improve your video audio quality with these simple but effective techniques.",
-      readTime: "6 min",
-      trending: true
-    },
-    {
-      id: 4,
-      title: "Thumbnail Design Psychology",
-      excerpt: "The science behind thumbnails that get clicked and how to design them.",
-      readTime: "8 min",
-      trending: false
-    },
-    {
-      id: 5,
-      title: "Video Editing Workflow Optimization",
-      excerpt: "Streamline your editing process and save hours with these workflow tips.",
-      readTime: "11 min",
-      trending: true
-    },
-    {
-      id: 6,
-      title: "Repurposing Content Across Platforms",
-      excerpt: "Transform one video into multiple pieces of content for different platforms.",
-      readTime: "10 min",
-      trending: false
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:video', fallbackLimit: 6 });
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const collection = {
@@ -115,7 +73,7 @@ const VideoTools = () => {
     url: typeof window !== 'undefined' ? window.location.href : '',
     hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'MultimediaApplication', operatingSystem: 'Web', url: `${baseUrl}${t.route}` }))
   };
-  const articles = blogPosts.map((p) => ({
+  const articles = (blogPosts || []).map((p: any) => ({
     '@type': 'Article',
     headline: p.title,
     description: p.excerpt,
@@ -224,13 +182,11 @@ const VideoTools = () => {
             <p className="text-muted-foreground">Master video creation with expert tips and strategies</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending
