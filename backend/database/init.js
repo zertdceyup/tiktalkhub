@@ -407,6 +407,9 @@ export const initializeDatabase = async () => {
       { key: 'posts_sidebar_count', value: '6', type: 'number', category: 'blog', description: 'Sidebar posts count on tools' },
       { key: 'ad_header_code', value: '', category: 'monetization', description: 'Header ad/script injection' },
       { key: 'ad_footer_code', value: '', category: 'monetization', description: 'Footer ad/script injection' },
+      { key: 'adsense_client', value: '', category: 'monetization', description: 'Google AdSense Client ID' },
+      { key: 'adsense_slot', value: '', category: 'monetization', description: 'Google AdSense Slot ID' },
+      { key: 'cmp_mode', value: 'basic', type: 'string', category: 'privacy', description: 'CMP mode (basic, advanced)' },
       // New AI/TTS/ASR/Tiko settings
       { key: 'enable_local_ai', value: 'true', type: 'boolean', category: 'ai', description: 'Use local AI engines' },
       { key: 'ai_model_path', value: '', category: 'ai', description: 'Local AI model path' },
@@ -490,6 +493,18 @@ export const initializeDatabase = async () => {
           [tool.name, tool.slug, tool.category, tool.description, tool.icon]);
       }
     }
+
+    // Simple vector table for RAG (placeholder)
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS rag_index (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        doc_type TEXT,
+        doc_id TEXT,
+        content TEXT,
+        embedding BLOB,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
 
     logger.info('✅ Database initialized successfully');
     return { db, runSQL, getSQL, allSQL };

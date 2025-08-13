@@ -5,6 +5,7 @@ import db from '../database/init.js';
 import { optionalAuth } from '../middleware/auth.js';
 import aiService from '../services/aiService.js';
 import logger from '../utils/logger.js';
+import { allSQL } from '../database/init.js';
 
 const router = express.Router();
 
@@ -362,6 +363,27 @@ router.post('/generate-content', [
       message: 'Failed to generate content'
     });
   }
+});
+
+// RAG: upsert document
+router.post('/rag/upsert', [ body('doc_type').isString(), body('doc_id').isString(), body('content').isString() ], async (req, res) => {
+  try {
+    const { doc_type, doc_id, content } = req.body;
+    const embedding = Buffer.from(new TextEncoder().encode(content.slice(0, 512))); // placeholder embedding
+    db.prepare('INSERT INTO rag_index (doc_type, doc_id, content, embedding) VALUES (?, ?, ?, ?)').run(doc_type, doc_id, content, embedding);
+    res.json({ success: true });
+  } catch (e) { logger.error('RAG upsert error', e); res.status(500).json({ success: false }); }
+});
+
+// RAG: search
+router.post('/rag/search', [ body('query').isString(), body('limit').optional().isInt({ min: 1, max: 10 }) ], async (req, res) => {
+  try {
+    const { query, limit = 5 } = req.body;
+    const rows = await allSQL('SELECT id, doc_type, doc_id, content FROM rag_index ORDER BY created_at DESC LIMIT 200');
+    // naive: rank by substring score
+    const ranked = rows.map(r => ({ r, score: (r.content.toLowerCase().includes(query.toLowerCase()) ? 1 : 0) + (r.content.match(new RegExp(query, 'gi'))||[]).length })).sort((a,b)=>b.score-a.score).slice(0, limit).map(x=>x.r);
+    res.json({ success: true, data: { results: ranked } });
+  } catch (e) { logger.error('RAG search error', e); res.status(500).json({ success: false }); }
 });
 
 // Get conversation history

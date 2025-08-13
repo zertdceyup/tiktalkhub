@@ -16,6 +16,21 @@ const PageRenderer: React.FC = () => {
   const renderBlock = (b: any) => {
     const cfg = b.config || {};
     switch (b.block_type) {
+      case 'ab-test': {
+        const cfgA = (cfg && cfg.variantA) || {};
+        const cfgB = (cfg && cfg.variantB) || {};
+        const key = `ab_${b.id}`;
+        let v = localStorage.getItem(key) || (Math.random() < 0.5 ? 'A' : 'B');
+        localStorage.setItem(key, v);
+        const active = v === 'A' ? cfgA : cfgB;
+        return (
+          <section key={b.id} className="py-6">
+            <div className="container mx-auto px-6">
+              <div className="border rounded p-4">A/B Variant {v}: {active.title || 'Untitled'}</div>
+            </div>
+          </section>
+        );
+      }
       case 'hero':
         return (
           <section key={b.id} className="py-16">

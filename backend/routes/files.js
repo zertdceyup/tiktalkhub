@@ -58,6 +58,14 @@ router.post('/upload', upload.single('file'), async (req, res) => {
         message: 'No file uploaded'
       });
     }
+    // AV scan stub: integrate clamscan or similar here
+    try {
+      if (process.env.ENABLE_AV_SCAN === 'true') {
+        // TODO: call clamscan; for now, pretend clean
+      }
+    } catch (e) {
+      return res.status(400).json({ success: false, message: 'File failed security scan' });
+    }
 
     const { toolUsed = 'general' } = req.body;
     const userId = req.user?.id || null;
@@ -377,6 +385,15 @@ router.post('/chunks/:uploadId/complete', (req, res) => {
       write.write(data);
     }
     write.end();
+    // AV scan stub for merged file
+    if (process.env.ENABLE_AV_SCAN === 'true') {
+      try {
+        // TODO: run clamscan on finalPath
+      } catch (e) {
+        try { fs.unlinkSync(finalPath); } catch {}
+        return res.status(400).json({ success: false, message: 'File failed security scan' });
+      }
+    }
 
     const userId = req.user?.id || null;
     const result = db.prepare(`INSERT INTO user_files (user_id, filename, original_name, file_path, file_size, mime_type, tool_used) VALUES (?, ?, ?, ?, ?, ?, ?)`)
