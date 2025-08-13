@@ -23,6 +23,24 @@ const CaptionOverlay: React.FC = () => {
   const [position, setPosition] = useState<'top'|'bottom'|'middle'>('bottom');
   const [outputUrl, setOutputUrl] = useState<string>('');
   const [srt, setSrt] = useState<string>('');
+  const [useBrandKit, setUseBrandKit] = useState<boolean>(true);
+  const [brand, setBrand] = useState<any>(null);
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/public/brand-kit`);
+        const j = await res.json();
+        const kit = j?.brand || null;
+        setBrand(kit);
+        if (kit && useBrandKit) {
+          if (kit.font_family) setFont(kit.font_family);
+          if (kit.colors?.text) setColor(kit.colors.text);
+          if (kit.colors?.caption_bg) setBackground(kit.colors.caption_bg);
+        }
+      } catch {}
+    })();
+  }, [useBrandKit]);
 
   const parseCaptions = (): CaptionItem[] => {
     return captionsText.split('\n').map(line => line.trim()).filter(Boolean).map(line => {
@@ -76,6 +94,10 @@ const CaptionOverlay: React.FC = () => {
               <div className="space-y-2">
                 <Label>Video file</Label>
                 <Input type="file" accept="video/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+              </div>
+              <div className="flex items-center gap-2">
+                <input id="brand-toggle" type="checkbox" checked={useBrandKit} onChange={(e) => setUseBrandKit(e.target.checked)} />
+                <Label htmlFor="brand-toggle">Use brand kit defaults</Label>
               </div>
               <div className="space-y-2">
                 <Label>Captions (format: start-end: text per line)</Label>

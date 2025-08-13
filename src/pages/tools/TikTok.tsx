@@ -11,6 +11,7 @@ import {
   Music, Hash, Crop, Lightbulb, 
   Edit3, TrendingUp, ArrowRight 
 } from 'lucide-react';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const TikTokTools = () => {
   const tools = [
@@ -55,56 +56,7 @@ const TikTokTools = () => {
     }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "TikTok Algorithm Secrets 2025",
-      excerpt: "Understanding the latest TikTok algorithm changes and how to optimize your content for maximum reach.",
-      readTime: "8 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=300&fit=crop"
-    },
-    {
-      id: 2,
-      title: "Viral Hook Formulas That Work",
-      excerpt: "Proven hook formulas that capture attention in the first 3 seconds and keep viewers watching.",
-      readTime: "6 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1626544827763-d516dce335e2?w=400&h=300&fit=crop"
-    },
-    {
-      id: 3,
-      title: "TikTok Monetization Strategies",
-      excerpt: "Complete guide to monetizing your TikTok presence through various revenue streams.",
-      readTime: "10 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=400&h=300&fit=crop"
-    },
-    {
-      id: 4,
-      title: "Audio Trends and Music Strategy",
-      excerpt: "How to leverage trending audio and create original sounds that go viral on TikTok.",
-      readTime: "7 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400&h=300&fit=crop"
-    },
-    {
-      id: 5,
-      title: "TikTok Analytics Deep Dive",
-      excerpt: "Understanding TikTok analytics and using data to improve your content performance.",
-      readTime: "9 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&h=300&fit=crop"
-    },
-    {
-      id: 6,
-      title: "Cross-Platform Content Strategy",
-      excerpt: "Repurposing TikTok content for Instagram Reels, YouTube Shorts, and other platforms.",
-      readTime: "11 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1611224923853-80b023f02d71?w=400&h=300&fit=crop"
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:tiktok', fallbackLimit: 6 });
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const collection = {
@@ -113,11 +65,11 @@ const TikTokTools = () => {
     url: typeof window !== 'undefined' ? window.location.href : '',
     hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'MultimediaApplication', operatingSystem: 'Web', url: `${baseUrl}/tools/tiktok` }))
   };
-  const articles = blogPosts.map((p) => ({
+  const articles = (blogPosts || []).map((p: any) => ({
     '@type': 'Article',
     headline: p.title,
     description: p.excerpt,
-    image: p.image ? [p.image] : undefined,
+    image: p.featured_image ? [p.featured_image] : undefined,
     author: { '@type': 'Organization', name: 'Tiktalkhub' },
     mainEntityOfPage: { '@type': 'WebPage', '@id': typeof window !== 'undefined' ? window.location.href : '' }
   }));
@@ -216,20 +168,18 @@ const TikTokTools = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer overflow-hidden">
                 <div className="aspect-video overflow-hidden">
                   <img 
-                    src={post.image} 
+                    src={post.featured_image} 
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending

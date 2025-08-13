@@ -9,6 +9,8 @@ import { Label } from '@/components/ui/label';
 import { useMutation } from '@tanstack/react-query';
 import SEO from '@/components/SEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
+// @ts-ignore
+const previewWorker = new Worker(new URL('../../../workers/imagePreview.worker.ts', import.meta.url), { type: 'module' });
 
 const ImageOptimizer: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -18,6 +20,7 @@ const ImageOptimizer: React.FC = () => {
   const [height, setHeight] = useState<number | ''>('' as any);
   const [result, setResult] = useState<any | null>(null);
   const [progress, setProgress] = useState<number>(0);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
 
   const uploadWithProgress = (): Promise<any> => new Promise((resolve, reject) => {
     if (!file) return reject(new Error('No file'));
@@ -43,6 +46,27 @@ const ImageOptimizer: React.FC = () => {
   });
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const runPreview = async () => {
+    if (!file) return;
+    setPreviewUrl('');
+    const msg: any = { type: 'preview', file, format, quality, width: width || undefined, height: height || undefined };
+    const url = await new Promise<string>((resolve, reject) => {
+      const onMessage = (e: MessageEvent) => {
+        const data = e.data || {};
+        if (data.type === 'preview-result') {
+          previewWorker.removeEventListener('message', onMessage);
+          resolve(data.url);
+        }
+        if (data.type === 'preview-error') {
+          previewWorker.removeEventListener('message', onMessage);
+          reject(new Error(data.error || 'Preview error'));
+        }
+      };
+      previewWorker.addEventListener('message', onMessage);
+      previewWorker.postMessage(msg);
+    });
+    setPreviewUrl(url);
+  };
 
   return (
     <div className="min-h-screen">
@@ -101,6 +125,7 @@ const ImageOptimizer: React.FC = () => {
               )}
               <div className="flex gap-3">
                 <Button className="btn-gold" onClick={() => mutate()} disabled={isPending}>Optimize</Button>
+                <Button variant="outline" onClick={runPreview} disabled={!file}>Client Preview</Button>
                 <Button variant="outline" onClick={() => { if (!result) return; const a = document.createElement('a'); a.href = result.optimizedImage; a.download = `optimized_${Date.now()}.${format}`; document.body.appendChild(a); a.click(); document.body.removeChild(a); }} disabled={!result}>Download</Button>
               </div>
               {result && (
@@ -112,6 +137,12 @@ const ImageOptimizer: React.FC = () => {
                     <p className="text-sm text-muted-foreground">Optimized: {Math.round((result.optimizedSize||0)/1024)} KB ({result.compressionRatio})</p>
                     <img src={result.optimizedImage} alt="Optimized" className="max-w-full rounded mt-2" />
                   </div>
+                </div>
+              )}
+              {previewUrl && (
+                <div className="mt-4">
+                  <p className="text-sm text-muted-foreground">Client preview (not uploaded):</p>
+                  <img src={previewUrl} alt="Preview" className="max-w-full rounded mt-2" />
                 </div>
               )}
             </CardContent>

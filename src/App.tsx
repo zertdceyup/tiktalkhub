@@ -84,6 +84,8 @@ const ReadabilityChecker = React.lazy(() => import('./pages/tools/content/Readab
 const ContentRepurposer = React.lazy(() => import('./pages/tools/content/ContentRepurposer'));
 const IdeaToScript = React.lazy(() => import('./pages/tools/content/IdeaToScript'));
 const SocialHookAnalyzer = React.lazy(() => import('./pages/tools/content/SocialHookAnalyzer'));
+const ContentRepurposePacks = React.lazy(() => import('./pages/tools/content/ContentRepurposePacks'));
+const HookLab = React.lazy(() => import('./pages/tools/content/HookLab'));
 const AdminPosts = React.lazy(() => import('./pages/admin/Posts'));
 const AdminTools = React.lazy(() => import('./pages/admin/Tools'));
 const AdminTemplates = React.lazy(() => import('./pages/admin/Templates'));
@@ -176,6 +178,8 @@ const App = () => (
           <Route path="/tools/content/content-repurposer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><ContentRepurposer /></React.Suspense>} />
           <Route path="/tools/content/idea-to-script" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><IdeaToScript /></React.Suspense>} />
           <Route path="/tools/content/social-hook-analyzer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><SocialHookAnalyzer /></React.Suspense>} />
+          <Route path="/tools/content/repurpose-packs" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><ContentRepurposePacks /></React.Suspense>} />
+          <Route path="/tools/content/hook-lab" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><HookLab /></React.Suspense>} />
           <Route path="/tools/utility/image-optimizer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><ImageOptimizer /></React.Suspense>} />
           <Route path="/tools/utility/pdf-merger" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><PDFMerger /></React.Suspense>} />
           <Route path="/tools/utility/youtube-thumbnail-downloader" element={<YouTubeThumbnailDownloader />} />

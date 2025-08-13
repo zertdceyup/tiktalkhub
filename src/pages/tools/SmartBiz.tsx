@@ -9,6 +9,7 @@ import {
   Building2, Lightbulb, PenTool, FileText, 
   Calculator, Sparkles, ArrowRight, TrendingUp 
 } from 'lucide-react';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const SmartBiz = () => {
   const tools = [
@@ -53,50 +54,7 @@ const SmartBiz = () => {
     }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "10 Business Name Ideas That Actually Work",
-      excerpt: "Real examples of successful business names and the psychology behind why they work so well.",
-      readTime: "5 min",
-      trending: true
-    },
-    {
-      id: 2,
-      title: "Logo Design Trends for 2024",
-      excerpt: "Stay ahead with the latest logo design trends that are dominating the business world.",
-      readTime: "7 min",
-      trending: false
-    },
-    {
-      id: 3,
-      title: "Creating Your First Business Plan",
-      excerpt: "Step-by-step guide to writing a business plan that actually gets funded.",
-      readTime: "12 min",
-      trending: true
-    },
-    {
-      id: 4,
-      title: "Small Business Marketing on a Budget",
-      excerpt: "Proven marketing strategies that don't require a huge advertising budget.",
-      readTime: "8 min",
-      trending: false
-    },
-    {
-      id: 5,
-      title: "Invoice Best Practices for Freelancers",
-      excerpt: "Get paid faster with these professional invoicing tips and templates.",
-      readTime: "6 min",
-      trending: true
-    },
-    {
-      id: 6,
-      title: "Building Brand Identity from Scratch",
-      excerpt: "Complete guide to developing a cohesive brand identity that resonates with customers.",
-      readTime: "10 min",
-      trending: false
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:smartbiz', fallbackLimit: 6 });
 
   return (
     <div className="min-h-screen">
@@ -196,13 +154,11 @@ const SmartBiz = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending

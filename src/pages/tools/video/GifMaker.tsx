@@ -10,6 +10,7 @@ import { useMutation } from '@tanstack/react-query';
 import api, { getErrorMessage } from '@/lib/api';
 import SEO from '@/components/SEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { convertToGifClient } from '@/lib/ffmpegWasm';
 
 const GifMaker: React.FC = () => { const [progress, setProgress] = useState<number>(0);
   const [file, setFile] = useState<File | null>(null);
@@ -18,6 +19,7 @@ const GifMaker: React.FC = () => { const [progress, setProgress] = useState<numb
   const [fps, setFps] = useState<number>(15);
   const [quality, setQuality] = useState<'low'|'medium'|'high'>('medium');
   const [gif, setGif] = useState<any | null>(null);
+  const [clientUrl, setClientUrl] = useState<string>('');
 
   const uploadWithProgress = (): Promise<any> => new Promise((resolve, reject) => {
     if (!file) return reject(new Error('No file'));
@@ -96,6 +98,7 @@ const GifMaker: React.FC = () => { const [progress, setProgress] = useState<numb
               </div>
               <div className="flex gap-3">
                 <Button className="btn-gold" onClick={() => mutate()} disabled={isPending}>Create GIF</Button>
+                <Button variant="outline" onClick={async () => { if (!file) return; setClientUrl(''); try { const url = await convertToGifClient(file, { start: startTime, duration, fps, quality }); setClientUrl(url); } catch (e: any) { alert(e?.message || 'Client fallback failed'); } }} disabled={!file}>Client-side (WASM) Fallback</Button>
               </div>
               {isPending && (
                 <div className="w-full bg-secondary rounded h-2 overflow-hidden">
@@ -106,6 +109,12 @@ const GifMaker: React.FC = () => { const [progress, setProgress] = useState<numb
                 <div className="space-y-2">
                   <p className="text-sm text-muted-foreground">Frames: {gif.output?.frames}, Size: {Math.round((gif.output?.size||0)/1024)} KB</p>
                   <img src={gif.url} alt="Generated GIF" className="max-w-full rounded" loading="lazy" />
+                </div>
+              )}
+              {clientUrl && (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Client-side preview</p>
+                  <img src={clientUrl} alt="Client GIF" className="max-w-full rounded" loading="lazy" />
                 </div>
               )}
             </CardContent>

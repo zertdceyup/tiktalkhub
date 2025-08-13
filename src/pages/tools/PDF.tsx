@@ -11,6 +11,7 @@ import {
   FileText, Merge, Split, Lock, 
   Download, Image, ArrowRight, TrendingUp 
 } from 'lucide-react';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const PDF = () => {
   const tools = [
@@ -55,32 +56,7 @@ const PDF = () => {
     }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "PDF Best Practices for Business",
-      excerpt: "Essential tips for creating, managing, and securing PDF documents in professional environments.",
-      readTime: "8 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=200&fit=crop"
-    },
-    {
-      id: 2,
-      title: "Digital Document Security Guide",
-      excerpt: "How to protect sensitive information in PDF documents with advanced security features.",
-      readTime: "10 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&h=200&fit=crop"
-    },
-    {
-      id: 3,
-      title: "PDF Optimization Techniques",
-      excerpt: "Advanced methods to reduce PDF file sizes while maintaining document quality and readability.",
-      readTime: "7 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?w=400&h=200&fit=crop"
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:pdf', fallbackLimit: 6 });
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const collection = {
@@ -89,11 +65,11 @@ const PDF = () => {
     url: typeof window !== 'undefined' ? window.location.href : '',
     hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web', url: `${baseUrl}/tools/pdf` }))
   };
-  const articles = blogPosts.map((p) => ({
+  const articles = (blogPosts || []).map((p: any) => ({
     '@type': 'Article',
     headline: p.title,
     description: p.excerpt,
-    image: p.image ? [p.image] : undefined,
+    image: p.featured_image ? [p.featured_image] : undefined,
     author: { '@type': 'Organization', name: 'Tiktalkhub' },
     mainEntityOfPage: { '@type': 'WebPage', '@id': typeof window !== 'undefined' ? window.location.href : '' }
   }));
@@ -197,20 +173,18 @@ const PDF = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer overflow-hidden">
                 <div className="aspect-video overflow-hidden">
                   <img 
-                    src={post.image} 
+                    src={post.featured_image} 
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending

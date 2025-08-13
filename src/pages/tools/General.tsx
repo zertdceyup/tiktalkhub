@@ -11,6 +11,7 @@ import {
   Settings, Download, Upload, Search, 
   FileText, Calculator, QrCode, ArrowRight, TrendingUp 
 } from 'lucide-react';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const GeneralTools = () => {
   const tools = [
@@ -61,56 +62,7 @@ const GeneralTools = () => {
     }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "Essential Digital Tools for 2025",
-      excerpt: "Discover the must-have digital tools that will transform your productivity this year.",
-      readTime: "8 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop"
-    },
-    {
-      id: 2,
-      title: "Workflow Automation Secrets",
-      excerpt: "Learn how to automate repetitive tasks and focus on what matters most.",
-      readTime: "6 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&h=300&fit=crop"
-    },
-    {
-      id: 3,
-      title: "Digital Organization Tips",
-      excerpt: "Master the art of digital organization with these proven strategies.",
-      readTime: "7 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1500673922987-e212871fec22?w=400&h=300&fit=crop"
-    },
-    {
-      id: 4,
-      title: "Time-Saving Tool Combinations",
-      excerpt: "Discover powerful tool combinations that work together seamlessly.",
-      readTime: "9 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=300&fit=crop"
-    },
-    {
-      id: 5,
-      title: "Future of Digital Productivity",
-      excerpt: "Explore upcoming trends in digital productivity and automation.",
-      readTime: "10 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=400&h=300&fit=crop"
-    },
-    {
-      id: 6,
-      title: "Cross-Platform Integration Guide",
-      excerpt: "Learn how to integrate tools across different platforms for maximum efficiency.",
-      readTime: "12 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop"
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:general', fallbackLimit: 6 });
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const collection = {
@@ -119,11 +71,11 @@ const GeneralTools = () => {
     url: typeof window !== 'undefined' ? window.location.href : '',
     hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web', url: `${baseUrl}${t.route}` }))
   };
-  const articles = blogPosts.map((p) => ({
+  const articles = (blogPosts || []).map((p: any) => ({
     '@type': 'Article',
     headline: p.title,
     description: p.excerpt,
-    image: p.image ? [p.image] : undefined,
+    image: p.featured_image ? [p.featured_image] : undefined,
     author: { '@type': 'Organization', name: 'Tiktalkhub' },
     mainEntityOfPage: { '@type': 'WebPage', '@id': typeof window !== 'undefined' ? window.location.href : '' }
   }));
@@ -228,20 +180,18 @@ const GeneralTools = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer overflow-hidden">
                 <div className="aspect-video overflow-hidden">
                   <img 
-                    src={post.image} 
+                    src={post.featured_image} 
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending

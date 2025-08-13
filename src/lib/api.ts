@@ -882,6 +882,10 @@ class ApiClient {
   async analyzeSocialHook(data: { hook: string }): Promise<ApiResponse<{ hook: string; styles: string[]; sentiment: any; readability: any; score: number; processingTime: number }>> {
     return this.request('/tools/content/social-hook-analyzer', { method: 'POST', body: JSON.stringify(data) });
   }
+
+  async hookLab(data: { seed?: string; style?: string; count?: number }): Promise<ApiResponse<{ variants: { text: string; score: number; reasons?: string[] }[]; processingTime: number }>> {
+    return this.request('/tools/content/hook-lab', { method: 'POST', body: JSON.stringify(data) });
+  }
 }
 
 // Create and export API client instance

@@ -9,6 +9,7 @@ import {
   FileText, User, Linkedin, BrainCircuit, 
   Target, Briefcase, ArrowRight, TrendingUp, Sparkles, Mic 
 } from 'lucide-react';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const Career = () => {
   const tools = [
@@ -52,50 +53,7 @@ const Career = () => {
       }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "Resume Keywords That Actually Work in 2024",
-      excerpt: "The exact keywords and phrases that will get your resume past ATS systems and into human hands.",
-      readTime: "8 min",
-      trending: true
-    },
-    {
-      id: 2,
-      title: "How to Ace Your Next Virtual Interview",
-      excerpt: "Master video interviews with these professional tips and technical setup guidelines.",
-      readTime: "6 min",
-      trending: false
-    },
-    {
-      id: 3,
-      title: "LinkedIn Profile Optimization Guide",
-      excerpt: "Transform your LinkedIn profile into a powerful career tool that attracts recruiters.",
-      readTime: "10 min",
-      trending: true
-    },
-    {
-      id: 4,
-      title: "Salary Negotiation Strategies That Work",
-      excerpt: "Proven techniques to negotiate higher salaries and better benefits packages.",
-      readTime: "12 min",
-      trending: false
-    },
-    {
-      id: 5,
-      title: "Building a Portfolio That Gets Noticed",
-      excerpt: "Showcase your skills effectively with these portfolio design and content strategies.",
-      readTime: "9 min",
-      trending: true
-    },
-    {
-      id: 6,
-      title: "Career Change at Any Age",
-      excerpt: "Successfully transition to a new career field with strategic planning and skill development.",
-      readTime: "11 min",
-      trending: false
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:career', fallbackLimit: 6 });
 
   return (
     <div className="min-h-screen">
@@ -186,13 +144,11 @@ const Career = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending

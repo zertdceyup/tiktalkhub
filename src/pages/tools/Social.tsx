@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import AdSlot from '@/components/AdSlot';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const SocialTools = () => {
   const tools = [
@@ -62,50 +63,7 @@ const SocialTools = () => {
     }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "Hashtag Strategy That Actually Works",
-      excerpt: "The complete guide to using hashtags effectively across all social media platforms.",
-      readTime: "8 min",
-      trending: true
-    },
-    {
-      id: 2,
-      title: "Instagram Growth Hacks for 2024",
-      excerpt: "Proven strategies to grow your Instagram following organically and authentically.",
-      readTime: "10 min",
-      trending: false
-    },
-    {
-      id: 3,
-      title: "Writing Captions That Convert",
-      excerpt: "Psychology-backed techniques for writing social media captions that drive engagement.",
-      readTime: "7 min",
-      trending: true
-    },
-    {
-      id: 4,
-      title: "Twitter Thread Mastery",
-      excerpt: "How to create viral Twitter threads that build your audience and authority.",
-      readTime: "6 min",
-      trending: false
-    },
-    {
-      id: 5,
-      title: "Bio Link Optimization Guide",
-      excerpt: "Maximize your bio link's potential with these conversion-focused strategies.",
-      readTime: "5 min",
-      trending: true
-    },
-    {
-      id: 6,
-      title: "Social Media Analytics Deep Dive",
-      excerpt: "Understanding and leveraging social media metrics to improve your strategy.",
-      readTime: "12 min",
-      trending: false
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:social', fallbackLimit: 6 });
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
   const collection = {
@@ -114,7 +72,7 @@ const SocialTools = () => {
     url: typeof window !== 'undefined' ? window.location.href : '',
     hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'SocialNetworkingApplication', operatingSystem: 'Web', url: `${baseUrl}${t.route}` }))
   };
-  const articles = blogPosts.map((p) => ({
+  const articles = (blogPosts || []).map((p: any) => ({
     '@type': 'Article',
     headline: p.title,
     description: p.excerpt,
@@ -218,13 +176,11 @@ const SocialTools = () => {
             <p className="text-muted-foreground">Expert strategies to dominate social media</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer">
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending
