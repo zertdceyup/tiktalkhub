@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import SEO from '@/components/SEO';
 import { useMutation } from '@tanstack/react-query';
 import api, { getErrorMessage } from '@/lib/api';
+import { extractFrameDataURL, drawOverlayText } from '@/lib/videoFrame';
 
 interface CaptionItem { start: number; end: number; text: string }
 
@@ -25,6 +26,7 @@ const CaptionOverlay: React.FC = () => {
   const [srt, setSrt] = useState<string>('');
   const [useBrandKit, setUseBrandKit] = useState<boolean>(true);
   const [brand, setBrand] = useState<any>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
 
   React.useEffect(() => {
     (async () => {
@@ -132,11 +134,17 @@ const CaptionOverlay: React.FC = () => {
               <div className="flex gap-3">
                 <Button className="btn-gold" onClick={() => mutate()} disabled={isPending || !file}>Overlay</Button>
                 <Button variant="outline" onClick={downloadSrt} disabled={!srt}>Download SRT</Button>
-                <Button variant="outline" onClick={() => alert('Local preview coming soon') } disabled={!file}>Preview locally</Button>
+                <Button variant="outline" onClick={async () => { if (!file) return; const frame = await extractFrameDataURL(file, 1, 800); const over = await (drawOverlayText as any)(frame, (captionsText.split('\n')[0] || '').split(':').slice(1).join(':').trim(), { position: position, color, bg: background, fontFamily: font, fontSize: size }); setPreviewUrl(over); }} disabled={!file}>Preview locally</Button>
               </div>
               {outputUrl && (
                 <div className="space-y-2 mt-4">
                   <video controls className="w-full rounded" src={outputUrl}></video>
+                </div>
+              )}
+              {previewUrl && (
+                <div className="space-y-2 mt-4">
+                  <div className="text-sm text-muted-foreground">Client preview (first frame)</div>
+                  <img src={previewUrl} alt="Preview" className="w-full max-w-xl rounded" />
                 </div>
               )}
             </CardContent>
