@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import React from 'react';
 
 import { AuthProvider } from "@/contexts/AuthContext";
@@ -97,6 +97,53 @@ import PageRenderer from "./components/PageRenderer";
 
 const queryClient = new QueryClient();
 
+function GlobalAutosave() {
+  const location = useLocation();
+  React.useEffect(() => {
+    const key = `autosave:${location.pathname}`;
+    // restore
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const data = JSON.parse(raw);
+        const formEls = Array.from(document.querySelectorAll('input, textarea, select')) as (HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement)[];
+        formEls.forEach((el) => {
+          const name = el.name || el.id;
+          if (!name) return;
+          if (data[name] !== undefined) {
+            if ((el as HTMLInputElement).type === 'checkbox' || (el as HTMLInputElement).type === 'radio') {
+              (el as HTMLInputElement).checked = !!data[name];
+            } else {
+              (el as any).value = data[name];
+            }
+            el.dispatchEvent(new Event('input', { bubbles: true }));
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+      }
+    } catch {}
+    // save loop
+    const interval = setInterval(() => {
+      try {
+        const formEls = Array.from(document.querySelectorAll('input, textarea, select')) as (HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement)[];
+        const data: Record<string, any> = {};
+        formEls.forEach((el) => {
+          const name = el.name || el.id;
+          if (!name) return;
+          if ((el as HTMLInputElement).type === 'checkbox' || (el as HTMLInputElement).type === 'radio') {
+            data[name] = (el as HTMLInputElement).checked;
+          } else {
+            data[name] = (el as any).value;
+          }
+        });
+        localStorage.setItem(key, JSON.stringify(data));
+      } catch {}
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [location.pathname]);
+  return null;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -107,6 +154,7 @@ const App = () => (
            <CMPBanner />
            <PageRenderer />
          <ThemeTokens>
+         <GlobalAutosave />
          <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/about" element={<About />} />
