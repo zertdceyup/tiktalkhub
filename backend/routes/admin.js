@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import db from '../database/init.js';
 import { requireAdmin } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import { allSQL } from '../database/init.js';
 
 const router = express.Router();
 
@@ -828,6 +829,62 @@ router.delete('/faqs/:id', (req, res) => {
   db.prepare('DELETE FROM faqs WHERE id = ?').run(id);
   res.json({ success: true });
 });
+
+// Generate SEO posts for all active tools
+router.post('/seo/generate', async (req, res) => {
+  try {
+    const { perTool = 2, status = 'published' } = req.body || {};
+    const tools = await allSQL('SELECT name, slug, category, description FROM tools WHERE is_active = 1 ORDER BY category, name');
+    let created = 0;
+    for (const t of tools) {
+      const variants = [
+        {
+          title: `How to use ${t.name} (Fast + Free)` ,
+          excerpt: `${t.name} makes it easy to ${t.description || 'get the job done'} — here’s a quick guide and best practices.`,
+          content: buildHowToPost(t)
+        },
+        {
+          title: `${t.name}: Best Practices, Tips, and FAQs`,
+          excerpt: `Improve results with ${t.name}. Learn pro tips, common mistakes, and FAQs for better outcomes.`,
+          content: buildBestPracticesPost(t)
+        }
+      ];
+      for (let i = 0; i < Math.min(perTool, variants.length); i++) {
+        const v = variants[i];
+        const slug = (v.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,80)) + `-${Math.random().toString(36).slice(2,6)}`;
+        db.prepare(`INSERT INTO blog_posts (title, slug, content, excerpt, author_id, status, category, featured, views, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)`)
+          .run(v.title, slug, v.content, v.excerpt, req.user.id, status, t.category || 'general', new Date().toISOString(), new Date().toISOString());
+        created++;
+      }
+    }
+    res.json({ success: true, created });
+  } catch (e) {
+    logger.error('SEO generate error', e);
+    res.status(500).json({ success: false, message: 'Failed to generate posts' });
+  }
+});
+
+function buildHowToPost(t) {
+  const h = `# ${t.name} — How To Guide\n\n`+
+    `Learn how to use ${t.name} to ${t.description || 'accomplish your task quickly'} in a few simple steps. This guide covers setup, workflow, and pro tips.\n\n`+
+    `## Why use ${t.name}?\n${t.name} helps streamline your workflow with an easy interface and fast processing. It’s free, browser-based, and optimized for speed.\n\n`+
+    `## Steps\n1. Open the ${t.name} page\n2. Provide your input (files or text)\n3. Choose the right settings\n4. Click the action button and wait for processing\n5. Review, download, and iterate\n\n`+
+    `## Pro Tips\n- Use descriptive file names and keep inputs clean\n- Start with defaults, then tweak settings for best output\n- Link related tools from the ${t.category || 'tools'} category to build a repeatable workflow\n\n`+
+    `## FAQs\n**Is ${t.name} free?** Yes, it’s free to use.\n\n**Do you store my files?** Files are processed and stored temporarily to deliver results.\n\n**Can I use it on mobile?** Yes, the tool is mobile-friendly.\n\n`+
+    `## Related Tools\nExplore more in ${t.category || 'our tools'} to chain tasks and save time.`;
+  return h;
+}
+
+function buildBestPracticesPost(t) {
+  const b = `# ${t.name}: Best Practices\n\n`+
+    `To get the best results with ${t.name}, follow these tips and avoid common pitfalls.\n\n`+
+    `## Tips\n- Keep inputs high-quality to improve output\n- Use consistent settings to standardize results\n- Leverage templates and brand kits\n\n`+
+    `## Common Mistakes\n- Uploading low-resolution assets\n- Ignoring aspect ratios and safe zones\n- Skipping a quick preview before exporting\n\n`+
+    `## FAQs\n**What browsers are supported?** Latest Chrome/Firefox/Edge.\n\n**How fast is processing?** Most tasks complete within seconds.\n\n**Can I watermark results?** Yes, with your brand kit settings.\n\n`+
+    `## Next Steps\nTry ${t.name} now and explore complementary tools in ${t.category || 'our tools'}.`;
+  return b;
+}
 
 // Brand kits
 router.get('/brand-kits', (req, res) => {
