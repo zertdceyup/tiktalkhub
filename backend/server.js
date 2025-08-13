@@ -176,7 +176,7 @@ app.post('/ad-view', express.text({ type: '*/*' }), (req, res) => {
 // Public settings (read-only subset)
 app.get('/api/public/settings', async (req, res) => {
   try {
-    const rows = await allSQL('SELECT key, value, category FROM admin_settings WHERE key IN ("site_name","site_description","enable_ai_features","enable_local_ai","tiko_persona","tiko_suggestions_enabled","posts_home_count","posts_sidebar_count","ad_header_code","ad_footer_code","adsense_client","adsense_slot","cmp_mode")');
+    const rows = await allSQL('SELECT key, value, category FROM admin_settings WHERE key IN ("site_name","site_description","enable_ai_features","enable_local_ai","tiko_persona","tiko_suggestions_enabled","posts_home_count","posts_sidebar_count","ad_header_code","ad_footer_code","adsense_client","adsense_slot","cmp_mode","search_console_meta")');
     const settings = rows.reduce((acc, r) => { acc[r.key] = r.value; return acc; }, {});
     res.json({ success: true, settings });
   } catch (e) {

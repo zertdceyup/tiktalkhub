@@ -25,6 +25,19 @@ async function injectScripts() {
       el.innerHTML = s.ad_footer_code;
       document.body.appendChild(el);
     }
+    if (s.search_console_meta) {
+      // accept full meta tag or just content code
+      const val = String(s.search_console_meta);
+      if (val.includes('<meta')) {
+        const tmp = document.createElement('div'); tmp.innerHTML = val.trim();
+        const meta = tmp.querySelector('meta'); if (meta) document.head.appendChild(meta);
+      } else {
+        const meta = document.createElement('meta');
+        meta.name = 'google-site-verification';
+        meta.content = val;
+        document.head.appendChild(meta);
+      }
+    }
   } catch {}
 
   try {

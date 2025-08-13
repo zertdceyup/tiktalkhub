@@ -48,7 +48,11 @@ const SettingsPage: React.FC = () => {
                     {(items as any[]).map((s) => (
                       <div key={s.key} className="space-y-1">
                         <div className="text-xs text-muted-foreground">{s.key}</div>
-                        <Input value={s.value || ''} onChange={(e) => update(category, s.key, e.target.value)} />
+                        {s.key === 'search_console_meta' ? (
+                          <textarea className="w-full h-24 rounded border p-2 text-sm font-mono" value={s.value || ''} onChange={(e) => update(category, s.key, e.target.value)} placeholder='<meta name="google-site-verification" content="..." /> or code' />
+                        ) : (
+                          <Input value={s.value || ''} onChange={(e) => update(category, s.key, e.target.value)} />
+                        )}
                       </div>
                     ))}
                   </div>

@@ -410,6 +410,7 @@ export const initializeDatabase = async () => {
       { key: 'adsense_client', value: '', category: 'monetization', description: 'Google AdSense Client ID' },
       { key: 'adsense_slot', value: '', category: 'monetization', description: 'Google AdSense Slot ID' },
       { key: 'cmp_mode', value: 'basic', type: 'string', category: 'privacy', description: 'CMP mode (basic, advanced)' },
+      { key: 'search_console_meta', value: '', category: 'general', description: 'Full meta tag or verification code' },
       // New AI/TTS/ASR/Tiko settings
       { key: 'enable_local_ai', value: 'true', type: 'boolean', category: 'ai', description: 'Use local AI engines' },
       { key: 'ai_model_path', value: '', category: 'ai', description: 'Local AI model path' },
