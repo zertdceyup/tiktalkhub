@@ -51,7 +51,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://pagead2.googlesyndication.com"],
       connectSrc: ["'self'", "https://api.openai.com"]
     }
   }
@@ -157,6 +157,20 @@ app.get('/api/og-image', async (req, res) => {
   } catch (e) {
     res.status(500).json({ success: false, message: 'Failed to render OG image' });
   }
+});
+
+// Ad view beacon
+app.post('/ad-view', express.text({ type: '*/*' }), (req, res) => {
+  try {
+    const payload = JSON.parse(req.body || '{}');
+    const ms = Number(payload.ms) || 0;
+    const slot = String(payload.id || '');
+    if (ms > 0 && slot) {
+      const stmt = db.prepare('INSERT INTO ad_views (slot_id, view_ms, user_agent, ip_address) VALUES (?, ?, ?, ?)');
+      stmt.run(slot, ms, req.get('User-Agent') || '', req.ip);
+    }
+  } catch {}
+  res.status(204).end();
 });
 
 // Public settings (read-only subset)

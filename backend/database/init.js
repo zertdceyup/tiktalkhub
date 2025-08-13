@@ -506,6 +506,17 @@ export const initializeDatabase = async () => {
       );
     `);
 
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS ad_views (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slot_id TEXT,
+        view_ms INTEGER,
+        user_agent TEXT,
+        ip_address TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     logger.info('✅ Database initialized successfully');
     return { db, runSQL, getSQL, allSQL };
 
