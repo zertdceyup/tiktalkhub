@@ -619,6 +619,26 @@ router.post('/social-hook-analyzer', [
   }
 });
 
+// Hook Lab iterations: propose alternatives and score
+router.post('/hook-lab', [ body('hook').isLength({ min: 5 }), body('iterations').optional().isInt({ min: 1, max: 10 }) ], async (req, res) => {
+  const start = Date.now();
+  try {
+    const { hook, iterations = 5 } = req.body;
+    const variants = [];
+    for (let i = 0; i < iterations; i++) {
+      const alt = i % 2 === 0 ? `${hook.replace(/\.$/, '')}?` : hook.toUpperCase().slice(0, 120);
+      const sentiment = analyzeSentiment(alt);
+      const readability = await analyzeReadability(alt);
+      const score = Math.min(100, Math.max(20, 60 + (sentiment.score > 0 ? 10 : 0) - (readability.level.includes('Difficult') ? 10 : 0)));
+      variants.push({ text: alt, score, sentiment, readability });
+    }
+    const processingTime = Date.now() - start;
+    res.json({ success: true, data: { base: hook, variants, processingTime } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Hook Lab failed' });
+  }
+});
+
 // Helper functions
 const generateTemplateBlogIdeas = (niche, contentType, targetAudience, keywords, count) => {
   const templates = {

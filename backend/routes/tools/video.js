@@ -6,6 +6,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { spawn } from 'child_process';
+import { allSQL } from '../../database/init.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -86,6 +87,17 @@ router.post('/thumbnail-selector', upload.single('video'), [
       const ts = Math.max(0, (duration / (Number(count)+1)) * i);
       const outJpg = path.join(uploadsDir, `${base}_thumb_${i}.jpg`);
       await runFFmpeg(['-ss', String(ts), '-i', inputPath, '-frames:v','1','-q:v','2', outJpg]);
+      // Apply watermark/logo if brand kit exists
+      try {
+        const kits = await allSQL('SELECT * FROM brand_kits ORDER BY updated_at DESC LIMIT 1');
+        const kit = kits?.[0];
+        if (kit && kit.watermark_url) {
+          const stamped = path.join(uploadsDir, `${base}_thumb_${i}_wm.jpg`);
+          // Position bottom-right with padding
+          await runFFmpeg(['-i', outJpg, '-i', path.join(process.cwd(), kit.watermark_url.replace(/^\//,'')), '-filter_complex', 'overlay=W-w-20:H-h-20', '-q:v','2', stamped]);
+          fs.copyFileSync(stamped, outJpg);
+        }
+      } catch {}
       thumbs.push({ id: i, timestamp: ts, url: `/uploads/video/${path.basename(outJpg)}`, width: 0, height: 0 });
     }
     const processingTime = Date.now() - startTime;
