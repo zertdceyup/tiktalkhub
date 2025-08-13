@@ -78,6 +78,7 @@ const PDFSplitter = React.lazy(() => import('./pages/tools/utility/PDFSplitter')
 const PDFPasswordProtector = React.lazy(() => import('./pages/tools/utility/PDFPasswordProtector'));
 const PDFToImage = React.lazy(() => import('./pages/tools/utility/PDFToImage'));
 import CaptionOverlay from "./pages/tools/video/CaptionOverlay";
+const VideoPro = React.lazy(() => import('./pages/tools/video/VideoPro'));
 import TrendingAudio from "./pages/tools/tiktok/TrendingAudio";
 const AdminSettings = React.lazy(() => import('./pages/admin/Settings'));
 const ReadabilityChecker = React.lazy(() => import('./pages/tools/content/ReadabilityChecker'));
@@ -142,6 +143,7 @@ const App = () => (
            <Route path="/tools/career/job-match-optimizer" element={<JobMatchOptimizer />} />
           <Route path="/tools/video" element={<VideoTools />} />
           <Route path="/tools/video/trimmer" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><VideoTrimmer /></React.Suspense>} />
+          <Route path="/tools/video/pro" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><VideoPro /></React.Suspense>} />
           <Route path="/tools/video/thumbnail-selector" element={<ThumbnailSelector />} />
             <Route path="/tools/video/thumbnail-optimizer" element={<ThumbnailOptimizer />} />
             <Route path="/tools/video/gif-maker" element={<React.Suspense fallback={<div className='p-8'>Loading…</div>}><GifMaker /></React.Suspense>} />

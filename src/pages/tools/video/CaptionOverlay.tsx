@@ -132,6 +132,7 @@ const CaptionOverlay: React.FC = () => {
               <div className="flex gap-3">
                 <Button className="btn-gold" onClick={() => mutate()} disabled={isPending || !file}>Overlay</Button>
                 <Button variant="outline" onClick={downloadSrt} disabled={!srt}>Download SRT</Button>
+                <Button variant="outline" onClick={() => alert('Local preview coming soon') } disabled={!file}>Preview locally</Button>
               </div>
               {outputUrl && (
                 <div className="space-y-2 mt-4">
