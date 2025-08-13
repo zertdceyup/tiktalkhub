@@ -1,12 +1,14 @@
-import { createFFmpeg, fetchFile } from '@ffmpeg/ffmpeg';
-
 let ffmpegInstance: any = null;
 
 async function getFFmpeg() {
   if (ffmpegInstance) return ffmpegInstance;
-  const ff = createFFmpeg({ log: false });
+  const mod: any = await import('@ffmpeg/ffmpeg');
+  const create = mod.createFFmpeg || (mod.default && mod.default.createFFmpeg);
+  const fetchFile = mod.fetchFile || (mod.default && mod.default.fetchFile);
+  if (!create || !fetchFile) throw new Error('FFmpeg WASM not available');
+  const ff = create({ log: false });
   await ff.load();
-  ffmpegInstance = ff;
+  ffmpegInstance = { ff, fetchFile };
   return ffmpegInstance;
 }
 
@@ -14,8 +16,8 @@ export async function convertToGifClient(file: File, opts: { start?: number; dur
   const start = opts.start ?? 0;
   const duration = opts.duration ?? 3;
   const fps = opts.fps ?? 15;
-  const scale = 360; // height target
-  const ff = await getFFmpeg();
+  const scale = 360;
+  const { ff, fetchFile } = await getFFmpeg();
   const inName = 'input.mp4';
   const palette = 'palette.png';
   const outName = 'out.gif';

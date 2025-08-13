@@ -449,6 +449,40 @@ class ApiClient {
     });
   }
 
+  async videoProSilenceStrip(data: { file: File; threshold?: string; duration?: number }): Promise<ApiResponse<{ url: string; processingTime: number }>> {
+    const formData = new FormData(); formData.append('video', data.file);
+    if (data.threshold) formData.append('threshold', data.threshold);
+    if (data.duration !== undefined) formData.append('duration', String(data.duration));
+    return this.request('/tools/video/pro/silence-strip', { method: 'POST', body: formData, headers: {} });
+  }
+  async videoProLoudnorm(data: { file: File; i?: number; tp?: number; lra?: number }): Promise<ApiResponse<{ url: string; processingTime: number }>> {
+    const formData = new FormData(); formData.append('video', data.file);
+    if (data.i !== undefined) formData.append('i', String(data.i));
+    if (data.tp !== undefined) formData.append('tp', String(data.tp));
+    if (data.lra !== undefined) formData.append('lra', String(data.lra));
+    return this.request('/tools/video/pro/loudness-normalize', { method: 'POST', body: formData, headers: {} });
+  }
+  async videoProColorFix(data: { file: File; saturation?: number; contrast?: number; brightness?: number }): Promise<ApiResponse<{ url: string; processingTime: number }>> {
+    const formData = new FormData(); formData.append('video', data.file);
+    if (data.saturation !== undefined) formData.append('saturation', String(data.saturation));
+    if (data.contrast !== undefined) formData.append('contrast', String(data.contrast));
+    if (data.brightness !== undefined) formData.append('brightness', String(data.brightness));
+    return this.request('/tools/video/pro/color-fix', { method: 'POST', body: formData, headers: {} });
+  }
+  async videoProSmartAutoCrop(data: { file: File; duration?: number }): Promise<ApiResponse<{ url: string; processingTime: number }>> {
+    const formData = new FormData(); formData.append('video', data.file);
+    if (data.duration !== undefined) formData.append('duration', String(data.duration));
+    return this.request('/tools/video/pro/smart-auto-crop', { method: 'POST', body: formData, headers: {} });
+  }
+  async videoProBatch(operation: 'silence-strip'|'loudnorm'|'color-fix', files: File[]): Promise<ApiResponse<{ jobId: number; count: number }>> {
+    const formData = new FormData(); files.forEach((f) => formData.append('videos', f)); formData.append('operation', operation);
+    return this.request('/tools/video/pro/batch', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async getJob(id: number): Promise<ApiResponse<{ job: any }>> {
+    return this.request(`/tools/jobs/${id}`);
+  }
+
   async captionOverlay(data: {
     file: File;
     captions: { start: number; end: number; text: string }[];

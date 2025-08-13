@@ -208,4 +208,13 @@ router.put('/projects/:id', optionalAuth, [ body('data').isObject() ], (req, res
   res.json({ success: true });
 });
 
+// Jobs: status lookup
+router.get('/jobs/:id', optionalAuth, (req, res) => {
+  const { id } = req.params;
+  const row = db.prepare('SELECT id, type, status, retries, max_retries, result, created_at, updated_at FROM jobs WHERE id = ?').get(id);
+  if (!row) return res.status(404).json({ success: false, message: 'Job not found' });
+  let parsed = null; try { parsed = row.result ? JSON.parse(row.result) : null; } catch { parsed = row.result; }
+  res.json({ success: true, data: { job: { ...row, result: parsed } } });
+});
+
 export default router;

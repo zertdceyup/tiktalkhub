@@ -214,47 +214,26 @@ router.post('/shorts-vertical-cropper', upload.single('video'), [
       }
     }
 
-    // Mock crop timeline (e.g., every second, a crop box)
-    const duration = cropEnd > cropStart ? (cropEnd - cropStart) : 15; // 15s default
-    const frames = Math.min(30, Math.ceil(duration));
-    const cropTimeline = Array.from({ length: frames }).map((_, i) => ({
-      t: cropStart + i,
-      box: {
-        // normalized [0..1] crop box for the source video
-        x: 0.1 + 0.02 * Math.sin(i / 3),
-        y: 0.1 + 0.02 * Math.cos(i / 4),
-        w: aspect === '9:16' ? 0.5625 : aspect === '4:5' ? 0.8 : 1.0,
-        h: 1.0,
-      }
-    }));
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const outPath = path.join(uploadsDir, `${base}_shorts.mp4`);
+    const [wStr, hStr] = String(resolution).split('x');
+    const targetW = Number(wStr) || 1080;
+    const targetH = Number(hStr) || 1920;
+    const targetAspect = targetW / targetH; // ~0.5625 for 9:16
 
-    const output = {
-      url: `/api/video/shorts-crop-${Date.now()}.mp4`,
-      aspect,
-      strategy,
-      gravity,
-      background,
-      resolution,
-      duration,
-      safeZones,
-      cropTimeline,
-    };
+    // Basic smart strategy: center crop to 9:16 with background blur pad if needed
+    const vf = strategy === 'center'
+      ? `scale='if(gt(a,${targetAspect}),-1,${targetW})':'if(gt(a,${targetAspect}),${targetH},-1)',crop=${targetW}:${targetH}`
+      : `scale=${targetW}:${targetH}:force_original_aspect_ratio=cover,crop=${targetW}:${targetH}`;
 
+    // Optionally blur background for pillarbox (approximation via boxblur overlay would be more complex)
+    await runFFmpeg(['-i', inputPath, '-vf', vf, '-c:a', 'copy', outPath]);
+
+    const duration = cropEnd > cropStart ? (cropEnd - cropStart) : 0;
     const processingTime = Date.now() - startTime;
-
-    if (req.trackUsage) {
-      req.trackUsage(
-        'shorts-vertical-cropper',
-        req.user?.id,
-        req.ip,
-        req.get('User-Agent'),
-        { size: req.file.size, aspect, strategy, resolution },
-        { duration, frames: cropTimeline.length },
-        processingTime
-      );
-    }
-
-    res.json({ success: true, data: { output, processingTime, note: 'Demo implementation. In production, actual smart framing and crop rendering would occur.' } });
+    if (req.trackUsage) req.trackUsage('shorts-vertical-cropper', req.user?.id, req.ip, req.get('User-Agent'), { resolution, aspect, strategy }, { out: path.basename(outPath) }, processingTime);
+    res.json({ success: true, data: { output: { url: `/uploads/video/${path.basename(outPath)}`, aspect, strategy, background, resolution, duration, safeZones }, processingTime } });
   } catch (error) {
     logger.error('Shorts vertical cropper error:', error);
     res.status(500).json({ success: false, message: 'Failed to crop video' });
@@ -281,40 +260,16 @@ router.post('/noise-remover', upload.single('video'), [
     const humHz = req.body.humHz ? Number(req.body.humHz) : null;
     const dereverb = req.body.dereverb === 'true' || req.body.dereverb === true;
 
-    // Mock stats
-    const baselineNoiseDb =  -32; // dBFS
-    const reductionDb = mode === 'aggressive' ? 12 : mode === 'moderate' ? 8 : 4;
-    const postNoiseDb = baselineNoiseDb - reductionDb;
-    const humRemoved = Boolean(humHz);
-    const dereverbApplied = dereverb;
-
-    const output = {
-      url: `/api/video/noise-removed-${Date.now()}.mp4`,
-      settings: { mode, humHz, dereverb },
-      stats: {
-        baselineNoiseDb,
-        reductionDb,
-        postNoiseDb,
-        humRemoved,
-        dereverbApplied
-      }
-    };
-
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const outPath = path.join(uploadsDir, `${base}_denoise.mp4`);
+    const dn = mode === 'aggressive' ? 'afftdn=nf=-30' : mode === 'mild' ? 'afftdn=nf=-15' : 'afftdn=nf=-22';
+    const hum = humHz ? `,anequalizer=f=${humHz}:t=o:w=32:g=-24` : '';
+    const deverb = dereverb ? ',anlmdn=s=0.00002:p=0.7:tr=0.8' : '';
+    await runFFmpeg(['-i', inputPath, '-af', `${dn}${hum}${deverb}`, '-c:v', 'copy', outPath]);
     const processingTime = Date.now() - startTime;
-
-    if (req.trackUsage) {
-      req.trackUsage(
-        'noise-remover',
-        req.user?.id,
-        req.ip,
-        req.get('User-Agent'),
-        { size: req.file.size, mode, humHz, dereverb },
-        { reductionDb },
-        processingTime
-      );
-    }
-
-    res.json({ success: true, data: { output, processingTime, note: 'Demo implementation. In production, spectral denoise and hum notch filtering would run.' } });
+    if (req.trackUsage) req.trackUsage('noise-remover', req.user?.id, req.ip, req.get('User-Agent'), { mode, humHz, dereverb }, { out: path.basename(outPath) }, processingTime);
+    res.json({ success: true, data: { output: { url: `/uploads/video/${path.basename(outPath)}`, settings: { mode, humHz, dereverb } }, processingTime } });
   } catch (error) {
     logger.error('Noise remover error:', error);
     res.status(500).json({ success: false, message: 'Failed to remove noise' });
