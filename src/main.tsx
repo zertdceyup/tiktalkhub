@@ -26,6 +26,20 @@ async function injectScripts() {
       document.body.appendChild(el);
     }
   } catch {}
+
+  try {
+    const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/public/brand-kit`);
+    const j = await res.json();
+    const logo = j?.kit?.logo_url || j?.brand?.logo_url;
+    const href = logo ? (logo.startsWith('http') ? logo : `${location.origin}${logo}`) : '/icon-192.png';
+    const existing = document.querySelector("link[rel='icon']");
+    if (existing) existing.parentElement?.removeChild(existing);
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/png';
+    link.href = href;
+    document.head.appendChild(link);
+  } catch {}
 }
 
 function enableRoutePrefetch() {
