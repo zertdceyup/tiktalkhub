@@ -10,6 +10,7 @@ import { useMutation } from '@tanstack/react-query';
 import api, { getErrorMessage } from '@/lib/api';
 import SEO from '@/components/SEO';
 import Breadcrumbs from '@/components/Breadcrumbs';
+import { convertTrimClient } from '@/lib/ffmpegWasm';
 
 const VideoTrimmer: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -36,12 +37,23 @@ const VideoTrimmer: React.FC = () => {
         canonical="/tools/video/trimmer"
         jsonLd={{
           '@context': 'https://schema.org',
-          '@type': 'SoftwareApplication',
-          name: 'Video Trimmer',
-          applicationCategory: 'MultimediaApplication',
-          operatingSystem: 'Web',
-          url: (typeof window !== 'undefined' ? window.location.href : ''),
-          offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+          '@graph': [
+            {
+              '@type': 'SoftwareApplication',
+              name: 'Video Trimmer',
+              applicationCategory: 'MultimediaApplication',
+              operatingSystem: 'Web',
+              url: (typeof window !== 'undefined' ? window.location.href : ''),
+              offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' }
+            },
+            {
+              '@type': 'FAQPage',
+              mainEntity: [
+                { '@type': 'Question', name: 'Is trimming done locally or on server?', acceptedAnswer: { '@type': 'Answer', text: 'Instant preview can run locally in your browser for quick validation. Final processing uses FFmpeg on our server for highest quality.' } },
+                { '@type': 'Question', name: 'Are my files stored?', acceptedAnswer: { '@type': 'Answer', text: 'Files are processed on the fly and stored locally only to deliver your download. You can delete files anytime.' } }
+              ]
+            }
+          ]
         }}
       />
       <Breadcrumbs trail={[{ name: 'Home', href: '/' }, { name: 'Video Tools', href: '/tools/video' }, { name: 'Video Trimmer' }]} jsonLdBaseUrl={typeof window !== 'undefined' ? window.location.origin : ''} />
@@ -77,6 +89,7 @@ const VideoTrimmer: React.FC = () => {
               </div>
               <div className="flex gap-3">
                 <Button className="btn-gold" onClick={() => mutate()} disabled={isPending}>Trim Video</Button>
+                <Button variant="outline" onClick={async () => { if (!file) return; const url = await convertTrimClient(file, { start: startTime, end: endTime }); setResult({ trimmedVideo: { url } }); }}>Preview locally</Button>
               </div>
               {result && (
                 <div className="space-y-2">

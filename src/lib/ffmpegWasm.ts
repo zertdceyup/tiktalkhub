@@ -29,4 +29,17 @@ export async function convertToGifClient(file: File, opts: { start?: number; dur
   return URL.createObjectURL(blob);
 }
 
+export async function convertTrimClient(file: File, opts: { start: number; end: number }) {
+  const start = opts.start ?? 0;
+  const end = opts.end ?? start + 3;
+  const { ff, fetchFile } = await getFFmpeg();
+  const inName = 'input.mp4';
+  const outName = 'clip.mp4';
+  ff.FS('writeFile', inName, await fetchFile(file));
+  await ff.run('-ss', String(start), '-to', String(end), '-i', inName, '-c', 'copy', outName);
+  const data = ff.FS('readFile', outName);
+  const blob = new Blob([data.buffer], { type: 'video/mp4' });
+  return URL.createObjectURL(blob);
+}
+
 export default { convertToGifClient };
