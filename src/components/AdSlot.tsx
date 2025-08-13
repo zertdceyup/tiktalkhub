@@ -13,9 +13,30 @@ const AdSlot: React.FC<{ id: string; height?: number; className?: string }> = ({
         const s = j?.settings || {};
         const client = s.adsense_client;
         const slot = s.adsense_slot;
+        const cmpMode = s.cmp_mode || 'basic';
         const cmpRaw = localStorage.getItem('cmp_consent');
         const cmp = cmpRaw ? JSON.parse(cmpRaw) : { ads: true };
-        if (!client || !slot || !cmp.ads) return;
+        if (!client || !slot) return;
+        // If TCF v2 mode, require consent via __tcfapi
+        if (cmpMode === 'tcfv2') {
+          // @ts-ignore
+          const tcf = (window as any).__tcfapi;
+          if (!tcf) return; // CMP not present
+          const hasConsent = await new Promise<boolean>((resolve) => {
+            try {
+              // @ts-ignore
+              (window as any).__tcfapi('getTCData', 2, (tcData: any, success: boolean) => {
+                if (!success || !tcData) return resolve(false);
+                // Purpose 1 (Storage and/or access of information)
+                const p1 = tcData.purpose?.consents?.[1] === true;
+                resolve(!!p1);
+              });
+            } catch { resolve(false); }
+          });
+          if (!hasConsent) return;
+        } else {
+          if (!cmp.ads) return;
+        }
         const inject = () => {
           if (!ref.current || injected) return;
           ref.current.innerHTML = '';
