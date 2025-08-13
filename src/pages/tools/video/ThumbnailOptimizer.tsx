@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import SEO from '@/components/SEO';
 import { useMutation } from '@tanstack/react-query';
 import api, { getErrorMessage } from '@/lib/api';
+import { extractFrameDataURL, drawOverlayText } from '@/lib/videoFrame';
 
 const ThumbnailOptimizer: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -19,6 +20,7 @@ const ThumbnailOptimizer: React.FC = () => {
   const [addBorder, setAddBorder] = useState<boolean>(true);
   const [badgeText, setBadgeText] = useState<string>('NEW');
   const [candidates, setCandidates] = useState<any[]>([]);
+  const [preview, setPreview] = useState<string>('');
 
   const { mutate, isPending } = useMutation({
     mutationFn: async () => {
@@ -92,6 +94,7 @@ const ThumbnailOptimizer: React.FC = () => {
               <div className="flex gap-3">
                 <Button className="btn-gold" onClick={() => mutate()} disabled={isPending || !file}>Generate</Button>
                 <Button variant="outline" onClick={() => setCandidates([])}>Reset</Button>
+                <Button variant="outline" onClick={async () => { if (!file) return; const frame = await extractFrameDataURL(file, 2, 800); const over = drawOverlayText(frame, title, { position: 'bottom', color: '#fff', bg: 'rgba(0,0,0,0.6)', fontSize: 56 }); setPreview(over as any); }}>Preview locally</Button>
               </div>
 
               {candidates.length > 0 && (
@@ -107,6 +110,12 @@ const ThumbnailOptimizer: React.FC = () => {
                       </div>
                     </div>
                   ))}
+                </div>
+              )}
+              {preview && (
+                <div className="mt-4">
+                  <div className="text-sm text-muted-foreground mb-1">Client preview (single frame)</div>
+                  <img src={preview} alt="Preview" className="w-full max-w-xl rounded" />
                 </div>
               )}
             </CardContent>
