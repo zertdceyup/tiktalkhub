@@ -253,6 +253,115 @@ export const initializeDatabase = async () => {
       )
     `);
 
+    // Page settings (per-route design tokens)
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS page_settings (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_path TEXT UNIQUE NOT NULL,
+        tokens_json TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Jobs queue
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS jobs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        type TEXT NOT NULL,
+        status TEXT DEFAULT 'pending',
+        payload TEXT,
+        result TEXT,
+        retries INTEGER DEFAULT 0,
+        max_retries INTEGER DEFAULT 3,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Pipelines
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS pipelines (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        description TEXT,
+        schema_json TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT 1,
+        created_by INTEGER,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users (id)
+      )
+    `);
+
+    // Pipeline runs
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS pipeline_runs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        pipeline_id INTEGER NOT NULL,
+        project_id INTEGER,
+        status TEXT DEFAULT 'queued',
+        log TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (pipeline_id) REFERENCES pipelines (id),
+        FOREIGN KEY (project_id) REFERENCES projects (id)
+      )
+    `);
+
+    // Projects
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        name TEXT NOT NULL,
+        data_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // Page blocks (block-based editor)
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS page_blocks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_path TEXT NOT NULL,
+        position INTEGER DEFAULT 0,
+        block_type TEXT NOT NULL,
+        config_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Brand kits
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS brand_kits (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        name TEXT NOT NULL,
+        colors_json TEXT,
+        fonts_json TEXT,
+        logo_url TEXT,
+        watermark_url TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+      )
+    `);
+
+    // Blog curation rules
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS blog_curation (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        context TEXT NOT NULL, -- e.g., 'home', 'category:video', 'path:/tools/video'
+        rule_json TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create indexes for better performance
     await runSQL('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
     await runSQL('CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug)');
@@ -293,7 +402,24 @@ export const initializeDatabase = async () => {
       { key: 'enable_ai_features', value: 'true', type: 'boolean', category: 'ai', description: 'Enable AI features' },
       { key: 'posts_per_page', value: '10', type: 'number', category: 'blog', description: 'Blog posts per page' },
       { key: 'adsense_code', value: '', category: 'monetization', description: 'Google AdSense code' },
-      { key: 'analytics_code', value: '', category: 'analytics', description: 'Google Analytics code' }
+      { key: 'analytics_code', value: '', category: 'analytics', description: 'Google Analytics code' },
+      { key: 'posts_home_count', value: '9', type: 'number', category: 'blog', description: 'Homepage posts count' },
+      { key: 'posts_sidebar_count', value: '6', type: 'number', category: 'blog', description: 'Sidebar posts count on tools' },
+      { key: 'ad_header_code', value: '', category: 'monetization', description: 'Header ad/script injection' },
+      { key: 'ad_footer_code', value: '', category: 'monetization', description: 'Footer ad/script injection' },
+      { key: 'adsense_client', value: '', category: 'monetization', description: 'Google AdSense Client ID' },
+      { key: 'adsense_slot', value: '', category: 'monetization', description: 'Google AdSense Slot ID' },
+      { key: 'cmp_mode', value: 'basic', type: 'string', category: 'privacy', description: 'CMP mode (basic, advanced)' },
+      { key: 'search_console_meta', value: '', category: 'general', description: 'Full meta tag or verification code' },
+      // New AI/TTS/ASR/Tiko settings
+      { key: 'enable_local_ai', value: 'true', type: 'boolean', category: 'ai', description: 'Use local AI engines' },
+      { key: 'ai_model_path', value: '', category: 'ai', description: 'Local AI model path' },
+      { key: 'whisper_bin', value: '', category: 'ai', description: 'Path to whisper.cpp binary' },
+      { key: 'whisper_model', value: 'ggml-base.en.bin', category: 'ai', description: 'Whisper model filename' },
+      { key: 'tts_bin', value: '', category: 'ai', description: 'Path to TTS binary' },
+      { key: 'tts_voice', value: 'en_US', category: 'ai', description: 'Default TTS voice' },
+      { key: 'tiko_persona', value: 'Helpful, concise, and friendly concierge', category: 'tiko', description: 'Tiko AI persona prompt' },
+      { key: 'tiko_suggestions_enabled', value: 'true', type: 'boolean', category: 'tiko', description: 'Enable Tiko tool suggestions' }
     ];
 
     for (const setting of defaultSettings) {
@@ -312,12 +438,14 @@ export const initializeDatabase = async () => {
       { name: 'Logo Sketch Wizard', slug: 'logo-sketch-wizard', category: 'smartbiz', description: 'Design logo concepts', icon: '🎨' },
       { name: 'Smart Flyer Designer', slug: 'smart-flyer-designer', category: 'smartbiz', description: 'Create professional flyers', icon: '📄' },
       { name: 'Invoice Maker', slug: 'invoice-maker', category: 'smartbiz', description: 'Generate professional invoices', icon: '📋' },
+      { name: 'Business Plan Generator', slug: 'business-plan-generator', category: 'smartbiz', description: 'Generate complete business plans', icon: '🧭' },
 
       // Career Tools
       { name: 'Resume Builder', slug: 'resume-builder', category: 'career', description: 'Build professional resumes', icon: '📝' },
       { name: 'Cover Letter AI', slug: 'cover-letter-ai', category: 'career', description: 'AI-powered cover letters', icon: '✉️' },
       { name: 'LinkedIn Summary Generator', slug: 'linkedin-summary', category: 'career', description: 'Create LinkedIn summaries', icon: '💼' },
       { name: 'Interview Coach', slug: 'interview-coach', category: 'career', description: 'Practice interviews with AI', icon: '🎤' },
+      { name: 'Job Match + Resume Optimizer', slug: 'job-match-optimizer', category: 'career', description: 'Analyze JD vs resume and optimize', icon: '🎯' },
 
       // Content Tools
       { name: 'Blog Idea Generator', slug: 'blog-idea-generator', category: 'content', description: 'Generate blog post ideas', icon: '💭' },
@@ -328,11 +456,17 @@ export const initializeDatabase = async () => {
       // Video Tools
       { name: 'Video Trimmer', slug: 'video-trimmer', category: 'video', description: 'Trim video files', icon: '✂️' },
       { name: 'Thumbnail Selector', slug: 'thumbnail-selector', category: 'video', description: 'Extract video thumbnails', icon: '🖼️' },
+      { name: 'Thumbnail Optimizer', slug: 'thumbnail-optimizer', category: 'video', description: 'Create CTR-optimized thumbnails', icon: '🖼️' },
       { name: 'GIF Maker', slug: 'gif-maker', category: 'video', description: 'Create GIFs from videos', icon: '🎬' },
+      { name: 'Shorts Vertical Cropper', slug: 'shorts-vertical-cropper', category: 'video', description: 'Auto-crop landscape videos to vertical formats', icon: '📱' },
+      { name: 'Noise Remover', slug: 'noise-remover', category: 'video', description: 'Clean audio with noise reduction', icon: '🔇' },
+      { name: 'Batch Trimmer', slug: 'batch-trimmer', category: 'video', description: 'Trim multiple videos simultaneously', icon: '✂️' },
 
       // Social Tools
       { name: 'Hashtag Generator', slug: 'hashtag-generator', category: 'social', description: 'Generate trending hashtags', icon: '#️⃣' },
       { name: 'Twitter Thread Formatter', slug: 'twitter-thread-formatter', category: 'social', description: 'Format Twitter threads', icon: '🐦' },
+      { name: 'Instagram Bio Link Builder', slug: 'bio-link-builder', category: 'social', description: 'Create bio link landing pages', icon: '🔗' },
+      { name: 'Link Shortener', slug: 'link-shortener', category: 'social', description: 'Shorten and track links', icon: '🔗' },
 
       // TikTok Tools
       { name: 'TikTok Hashtag Heatmap', slug: 'tiktok-hashtag-heatmap', category: 'tiktok', description: 'Analyze TikTok hashtags', icon: '🔥' },
@@ -346,6 +480,9 @@ export const initializeDatabase = async () => {
       // Utility Tools
       { name: 'PDF Compressor', slug: 'pdf-compressor', category: 'utility', description: 'Compress PDF files', icon: '📄' },
       { name: 'QR Code Generator', slug: 'qr-generator', category: 'utility', description: 'Generate QR codes', icon: '📱' },
+      { name: 'Image Remixer', slug: 'image-remixer', category: 'utility', description: 'Apply effects to images', icon: '🖼️' },
+      { name: 'Text Summarizer', slug: 'text-summarizer', category: 'content', description: 'Summarize long text', icon: '📝' },
+      { name: 'Voice Notes to Text', slug: 'voice-notes-to-text', category: 'content', description: 'Transcribe audio to text', icon: '🎙️' },
       { name: 'Image Optimizer', slug: 'image-optimizer', category: 'utility', description: 'Optimize images', icon: '🖼️' },
       { name: 'AI Meme Generator', slug: 'ai-meme-generator', category: 'utility', description: 'Generate memes with AI', icon: '😂' }
     ];
@@ -357,6 +494,39 @@ export const initializeDatabase = async () => {
           [tool.name, tool.slug, tool.category, tool.description, tool.icon]);
       }
     }
+
+    // Simple vector table for RAG (placeholder)
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS rag_index (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        doc_type TEXT,
+        doc_id TEXT,
+        content TEXT,
+        embedding BLOB,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS ad_views (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slot_id TEXT,
+        view_ms INTEGER,
+        user_agent TEXT,
+        ip_address TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS faqs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        page_path TEXT NOT NULL,
+        items_json TEXT NOT NULL,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
 
     logger.info('✅ Database initialized successfully');
     return { db, runSQL, getSQL, allSQL };

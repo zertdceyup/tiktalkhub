@@ -2,174 +2,114 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import multer from 'multer';
 import logger from '../../utils/logger.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { spawn } from 'child_process';
+import { allSQL } from '../../database/init.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const uploadsDir = path.join(__dirname, '../../uploads/video');
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const router = express.Router();
 
 // Configure multer for video uploads
-const storage = multer.memoryStorage();
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, uploadsDir),
+  filename: (req, file, cb) => cb(null, `${Date.now()}_${Math.round(Math.random()*1e6)}_${file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_')}`)
+});
 const upload = multer({ 
   storage,
-  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB limit
+  limits: { fileSize: 200 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-msvideo'];
-    if (allowedTypes.includes(file.mimetype)) {
-      cb(null, true);
-    } else {
-      cb(new Error('Invalid video file type'), false);
-    }
+    if (allowedTypes.includes(file.mimetype)) cb(null, true); else cb(new Error('Invalid video file type'));
   }
 });
 
-// Video Trimmer (Mock implementation)
+function runFFmpeg(args) {
+  return new Promise((resolve, reject) => {
+    const ff = spawn(process.env.FFMPEG_PATH || 'ffmpeg', ['-y', ...args]);
+    let stderr = '';
+    ff.stderr.on('data', d => { stderr += d.toString(); });
+    ff.on('close', code => {
+      if (code === 0) resolve(stderr);
+      else reject(new Error(`ffmpeg exited with code ${code}: ${stderr}`));
+    });
+  });
+}
+
+// Video Trimmer - real ffmpeg
 router.post('/video-trimmer', upload.single('video'), [
   body('startTime').isFloat({ min: 0 }),
   body('endTime').isFloat({ min: 0 }),
   body('outputFormat').optional().isIn(['mp4', 'webm', 'mov'])
 ], async (req, res) => {
   const startTime = Date.now();
-  
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No video file provided'
-      });
-    }
-
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        message: 'Validation errors',
-        errors: errors.array()
-      });
-    }
-
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
     const { startTime: trimStart, endTime: trimEnd, outputFormat = 'mp4' } = req.body;
-
-    // Mock video processing
-    const originalDuration = 120; // Mock duration in seconds
-    const trimmedDuration = trimEnd - trimStart;
-
-    const result = {
-      originalFile: {
-        name: req.file.originalname,
-        size: req.file.size,
-        duration: originalDuration
-      },
-      trimmedVideo: {
-        url: `/api/video/trimmed-${Date.now()}.${outputFormat}`,
-        format: outputFormat,
-        duration: trimmedDuration,
-        startTime: trimStart,
-        endTime: trimEnd,
-        estimatedSize: Math.floor(req.file.size * (trimmedDuration / originalDuration))
-      }
-    };
-
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const outPath = path.join(uploadsDir, `${base}_trimmed.${outputFormat}`);
+    await runFFmpeg(['-ss', String(trimStart), '-to', String(trimEnd), '-i', inputPath, '-c', 'copy', outPath]);
     const processingTime = Date.now() - startTime;
-
-    // Track usage
-    if (req.trackUsage) {
-      req.trackUsage(
-        'video-trimmer',
-        req.user?.id,
-        req.ip,
-        req.get('User-Agent'),
-        { originalSize: req.file.size, outputFormat, duration: trimmedDuration },
-        { trimmedSize: result.trimmedVideo.estimatedSize },
-        processingTime
-      );
-    }
-
-    res.json({
-      success: true,
-      data: {
-        ...result,
-        processingTime,
-        note: 'This is a demo implementation. In production, actual video processing would occur.'
-      }
-    });
-
+    if (req.trackUsage) req.trackUsage('video-trimmer', req.user?.id, req.ip, req.get('User-Agent'), { input: path.basename(inputPath), outputFormat }, { outPath: path.basename(outPath) }, processingTime);
+    res.json({ success: true, data: { trimmedVideo: { url: `/uploads/video/${path.basename(outPath)}`, format: outputFormat }, processingTime } });
   } catch (error) {
     logger.error('Video trimmer error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to trim video'
-    });
+    res.status(500).json({ success: false, message: 'Failed to trim video' });
   }
 });
 
-// Thumbnail Selector (Mock implementation)
+// Thumbnail Selector - real ffmpeg extracting N thumbs evenly
 router.post('/thumbnail-selector', upload.single('video'), [
   body('count').optional().isInt({ min: 1, max: 20 })
 ], async (req, res) => {
   const startTime = Date.now();
-  
   try {
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No video file provided'
-      });
-    }
-
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
     const { count = 6 } = req.body;
-
-    // Mock thumbnail extraction
-    const thumbnails = [];
-    const videoDuration = 120; // Mock duration
-    
-    for (let i = 0; i < count; i++) {
-      const timestamp = (videoDuration / count) * i;
-      thumbnails.push({
-        id: i + 1,
-        timestamp,
-        url: `/api/thumbnails/thumb-${Date.now()}-${i}.jpg`,
-        width: 1920,
-        height: 1080
-      });
-    }
-
-    const processingTime = Date.now() - startTime;
-
-    // Track usage
-    if (req.trackUsage) {
-      req.trackUsage(
-        'thumbnail-selector',
-        req.user?.id,
-        req.ip,
-        req.get('User-Agent'),
-        { videoSize: req.file.size, count },
-        { thumbnailsGenerated: thumbnails.length },
-        processingTime
-      );
-    }
-
-    res.json({
-      success: true,
-      data: {
-        videoInfo: {
-          name: req.file.originalname,
-          size: req.file.size,
-          duration: videoDuration
-        },
-        thumbnails,
-        processingTime,
-        note: 'This is a demo implementation. In production, actual thumbnails would be extracted.'
-      }
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    // Probe duration
+    const probe = spawn(process.env.FFPROBE_PATH || 'ffprobe', ['-v','error','-show_entries','format=duration','-of','default=nk=1:nw=1', inputPath]);
+    const duration = await new Promise((resolve) => {
+      let out=''; probe.stdout.on('data', d => out += d.toString());
+      probe.on('close', () => resolve(parseFloat(out) || 60));
     });
-
+    const thumbs = [];
+    for (let i = 1; i <= Number(count); i++) {
+      const ts = Math.max(0, (duration / (Number(count)+1)) * i);
+      const outJpg = path.join(uploadsDir, `${base}_thumb_${i}.jpg`);
+      await runFFmpeg(['-ss', String(ts), '-i', inputPath, '-frames:v','1','-q:v','2', outJpg]);
+      // Apply watermark/logo if brand kit exists
+      try {
+        const kits = await allSQL('SELECT * FROM brand_kits ORDER BY updated_at DESC LIMIT 1');
+        const kit = kits?.[0];
+        if (kit && kit.watermark_url) {
+          const stamped = path.join(uploadsDir, `${base}_thumb_${i}_wm.jpg`);
+          // Position bottom-right with padding
+          await runFFmpeg(['-i', outJpg, '-i', path.join(process.cwd(), kit.watermark_url.replace(/^\//,'')), '-filter_complex', 'overlay=W-w-20:H-h-20', '-q:v','2', stamped]);
+          fs.copyFileSync(stamped, outJpg);
+        }
+      } catch {}
+      thumbs.push({ id: i, timestamp: ts, url: `/uploads/video/${path.basename(outJpg)}`, width: 0, height: 0 });
+    }
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('thumbnail-selector', req.user?.id, req.ip, req.get('User-Agent'), { count: Number(count) }, { thumbnails: thumbs.length }, processingTime);
+    res.json({ success: true, data: { thumbnails: thumbs, processingTime } });
   } catch (error) {
     logger.error('Thumbnail selector error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to extract thumbnails'
-    });
+    res.status(500).json({ success: false, message: 'Failed to extract thumbnails' });
   }
 });
 
-// GIF Maker (Mock implementation)
+// GIF Maker - real ffmpeg
 router.post('/gif-maker', upload.single('video'), [
   body('startTime').optional().isFloat({ min: 0 }),
   body('duration').optional().isFloat({ min: 0.1, max: 10 }),
@@ -177,74 +117,438 @@ router.post('/gif-maker', upload.single('video'), [
   body('fps').optional().isInt({ min: 5, max: 30 })
 ], async (req, res) => {
   const startTime = Date.now();
-  
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { startTime: gifStart = 0, duration = 3, quality = 'medium', fps = 15 } = req.body;
+    const scale = quality === 'high' ? '480:-1' : quality === 'medium' ? '320:-1' : '240:-1';
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const palette = path.join(uploadsDir, `${base}_palette.png`);
+    const outGif = path.join(uploadsDir, `${base}.gif`);
+    await runFFmpeg(['-ss', String(gifStart), '-t', String(duration), '-i', inputPath, '-vf', `fps=${fps},scale=${scale}:flags=lanczos,palettegen`, palette]);
+    await runFFmpeg(['-ss', String(gifStart), '-t', String(duration), '-i', inputPath, '-i', palette, '-lavfi', `fps=${fps},scale=${scale}:flags=lanczos [x]; [x][1:v] paletteuse`, outGif]);
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('gif-maker', req.user?.id, req.ip, req.get('User-Agent'), { duration, fps, quality }, { out: path.basename(outGif) }, processingTime);
+    res.json({ success: true, data: { gif: { url: `/uploads/video/${path.basename(outGif)}` }, processingTime } });
+  } catch (error) {
+    logger.error('GIF maker error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create GIF' });
+  }
+});
+
+// Caption Overlay - burn subtitles via ffmpeg using SRT
+router.post('/caption-overlay', upload.single('video'), [
+  body('captions').isArray({ min: 1 }),
+  body('font').optional().isString(),
+  body('size').optional().isInt({ min: 10, max: 96 }),
+  body('color').optional().isString(),
+  body('background').optional().isString(),
+  body('position').optional().isIn(['top','bottom','middle']),
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { captions } = req.body;
+    const list = Array.isArray(captions) ? captions : JSON.parse(captions);
+    const srt = list.map((c, idx) => `${idx + 1}\n${formatSrtTime(c.start)} --> ${formatSrtTime(c.end)}\n${c.text}\n`).join('\n');
+    const srtPath = path.join(uploadsDir, `${Date.now()}_${Math.round(Math.random()*1e6)}.srt`);
+    fs.writeFileSync(srtPath, srt, 'utf8');
+    const inputPath = req.file.path;
+    const outPath = path.join(uploadsDir, `${path.parse(inputPath).name}_captioned.mp4`);
+    await runFFmpeg(['-i', inputPath, '-vf', `subtitles='${srtPath.replace(/:/g, '\\:')}'`, '-c:a','copy', outPath]);
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('caption-overlay', req.user?.id, req.ip, req.get('User-Agent'), { captionCount: list.length }, { out: path.basename(outPath) }, processingTime);
+    res.json({ success: true, data: { output: { url: `/uploads/video/${path.basename(outPath)}` }, processingTime } });
+  } catch (error) {
+    logger.error('Caption overlay error:', error);
+    res.status(500).json({ success: false, message: 'Failed to overlay captions' });
+  }
+});
+
+router.post('/shorts-vertical-cropper', upload.single('video'), [
+  body('aspect').optional().isIn(['9:16','1:1','4:5']),
+  body('strategy').optional().isIn(['center','smart-face','smart-motion','manual']),
+  body('gravity').optional().isIn(['center','top','bottom','left','right']),
+  body('background').optional().isIn(['blur','black','white']),
+  body('resolution').optional().isIn(['720x1280','1080x1920','1440x2560']),
+  body('startTime').optional().isFloat({ min: 0 }),
+  body('endTime').optional().isFloat({ min: 0 }),
+  body('safeZones').optional().isString(), // JSON string
+], async (req, res) => {
+  const startTime = Date.now();
   try {
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No video file provided'
-      });
+      return res.status(400).json({ success: false, message: 'No video file provided' });
     }
 
-    const { 
-      startTime: gifStart = 0, 
-      duration = 3, 
-      quality = 'medium', 
-      fps = 15 
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const {
+      aspect = '9:16',
+      strategy = 'center',
+      gravity = 'center',
+      background = 'blur',
+      resolution = '1080x1920',
+      startTime: cropStart = 0,
+      endTime: cropEnd = 0,
+      safeZones: safeZonesJson
     } = req.body;
 
-    // Mock GIF creation
-    const qualityMultiplier = { low: 0.3, medium: 0.6, high: 1.0 };
-    const estimatedSize = Math.floor(req.file.size * 0.1 * qualityMultiplier[quality]);
-
-    const gifData = {
-      url: `/api/gifs/generated-${Date.now()}.gif`,
-      originalVideo: req.file.originalname,
-      settings: {
-        startTime: gifStart,
-        duration,
-        quality,
-        fps
-      },
-      output: {
-        size: estimatedSize,
-        width: quality === 'high' ? 480 : quality === 'medium' ? 320 : 240,
-        height: quality === 'high' ? 270 : quality === 'medium' ? 180 : 135,
-        frames: Math.floor(duration * fps)
+    let safeZones = { top: 0, bottom: 0, left: 0, right: 0 };
+    if (safeZonesJson) {
+      try {
+        const parsed = JSON.parse(safeZonesJson);
+        safeZones = {
+          top: Number(parsed.top) || 0,
+          bottom: Number(parsed.bottom) || 0,
+          left: Number(parsed.left) || 0,
+          right: Number(parsed.right) || 0,
+        };
+      } catch (_) {
+        // ignore parse error; keep defaults
       }
-    };
+    }
 
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const outPath = path.join(uploadsDir, `${base}_shorts.mp4`);
+    const [wStr, hStr] = String(resolution).split('x');
+    const targetW = Number(wStr) || 1080;
+    const targetH = Number(hStr) || 1920;
+    const targetAspect = targetW / targetH; // ~0.5625 for 9:16
+
+    // Basic smart strategy: center crop to 9:16 with background blur pad if needed
+    const vf = strategy === 'center'
+      ? `scale='if(gt(a,${targetAspect}),-1,${targetW})':'if(gt(a,${targetAspect}),${targetH},-1)',crop=${targetW}:${targetH}`
+      : `scale=${targetW}:${targetH}:force_original_aspect_ratio=cover,crop=${targetW}:${targetH}`;
+
+    // Optionally blur background for pillarbox (approximation via boxblur overlay would be more complex)
+    await runFFmpeg(['-i', inputPath, '-vf', vf, '-c:a', 'copy', outPath]);
+
+    const duration = cropEnd > cropStart ? (cropEnd - cropStart) : 0;
     const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('shorts-vertical-cropper', req.user?.id, req.ip, req.get('User-Agent'), { resolution, aspect, strategy }, { out: path.basename(outPath) }, processingTime);
+    res.json({ success: true, data: { output: { url: `/uploads/video/${path.basename(outPath)}`, aspect, strategy, background, resolution, duration, safeZones }, processingTime } });
+  } catch (error) {
+    logger.error('Shorts vertical cropper error:', error);
+    res.status(500).json({ success: false, message: 'Failed to crop video' });
+  }
+});
 
-    // Track usage
+router.post('/noise-remover', upload.single('video'), [
+  body('mode').optional().isIn(['mild','moderate','aggressive']),
+  body('humHz').optional().isFloat({ min: 20, max: 20000 }),
+  body('dereverb').optional().isBoolean(),
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file provided' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const mode = req.body.mode || 'moderate';
+    const humHz = req.body.humHz ? Number(req.body.humHz) : null;
+    const dereverb = req.body.dereverb === 'true' || req.body.dereverb === true;
+
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const outPath = path.join(uploadsDir, `${base}_denoise.mp4`);
+    const dn = mode === 'aggressive' ? 'afftdn=nf=-30' : mode === 'mild' ? 'afftdn=nf=-15' : 'afftdn=nf=-22';
+    const hum = humHz ? `,anequalizer=f=${humHz}:t=o:w=32:g=-24` : '';
+    const deverb = dereverb ? ',anlmdn=s=0.00002:p=0.7:tr=0.8' : '';
+    await runFFmpeg(['-i', inputPath, '-af', `${dn}${hum}${deverb}`, '-c:v', 'copy', outPath]);
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('noise-remover', req.user?.id, req.ip, req.get('User-Agent'), { mode, humHz, dereverb }, { out: path.basename(outPath) }, processingTime);
+    res.json({ success: true, data: { output: { url: `/uploads/video/${path.basename(outPath)}`, settings: { mode, humHz, dereverb } }, processingTime } });
+  } catch (error) {
+    logger.error('Noise remover error:', error);
+    res.status(500).json({ success: false, message: 'Failed to remove noise' });
+  }
+});
+
+router.post('/batch-trimmer', upload.array('videos', 10), [
+  body('startTime').isFloat({ min: 0 }),
+  body('endTime').isFloat({ min: 0 }),
+  body('outputFormat').optional().isIn(['mp4','webm','mov'])
+], async (req, res) => {
+  const started = Date.now();
+  try {
+    const files = req.files;
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, message: 'No video files provided' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { startTime: trimStart, endTime: trimEnd, outputFormat = 'mp4' } = req.body;
+    const results = [];
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      const base = path.parse(f.path).name;
+      const outPath = path.join(uploadsDir, `${base}_trim.${outputFormat}`);
+      await runFFmpeg(['-ss', String(trimStart), '-to', String(trimEnd), '-i', f.path, '-c', 'copy', outPath]);
+      results.push({ id: i+1, original: { name: f.originalname, size: f.size }, trimmed: { url: `/uploads/video/${path.basename(outPath)}`, format: outputFormat, startTime: Number(trimStart), endTime: Number(trimEnd) } });
+    }
+
+    const processingTime = Date.now() - started;
+
     if (req.trackUsage) {
       req.trackUsage(
-        'gif-maker',
+        'batch-trimmer',
         req.user?.id,
         req.ip,
         req.get('User-Agent'),
-        { videoSize: req.file.size, quality, duration, fps },
-        { gifSize: estimatedSize, frames: gifData.output.frames },
+        { fileCount: files.length, outputFormat },
+        { total: results.length },
         processingTime
       );
     }
 
-    res.json({
-      success: true,
-      data: {
-        gif: gifData,
-        processingTime,
-        note: 'This is a demo implementation. In production, actual GIF would be created.'
-      }
-    });
-
+    res.json({ success: true, data: { items: results, processingTime } });
   } catch (error) {
-    logger.error('GIF maker error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create GIF'
-    });
+    logger.error('Batch trimmer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to batch trim videos' });
   }
+});
+
+router.post('/thumbnail-optimizer', upload.single('video'), [
+  body('count').optional().isInt({ min: 1, max: 12 }),
+  body('title').optional().isString(),
+  body('style').optional().isIn(['clean','bold','minimal','vibrant']),
+  body('colorScheme').optional().isString(),
+  body('addBorder').optional().isBoolean(),
+  body('badgeText').optional().isString()
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file provided' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { count = 6, title = '', style = 'bold', colorScheme = 'red', addBorder = false, badgeText = '' } = req.body;
+    const inputPath = req.file.path; const base = path.parse(inputPath).name;
+    // Get duration
+    const probe = spawn(process.env.FFPROBE_PATH || 'ffprobe', ['-v','error','-show_entries','format=duration','-of','default=nk=1:nw=1', inputPath]);
+    const duration = await new Promise((resolve) => { let out=''; probe.stdout.on('data', d => out += d.toString()); probe.on('close', () => resolve(parseFloat(out) || 60)); });
+    const candidates = [];
+    for (let i = 1; i <= Number(count); i++) {
+      const ts = Math.max(0, (duration / (Number(count)+1)) * i);
+      const frame = path.join(uploadsDir, `${base}_opt_${i}.jpg`);
+      // Extract frame
+      await runFFmpeg(['-ss', String(ts), '-i', inputPath, '-frames:v','1','-q:v','2', frame]);
+      // Draw text overlay via drawtext
+      const out = path.join(uploadsDir, `${base}_opt_${i}_text.jpg`);
+      const fontcolor = style === 'bold' ? 'white' : 'black';
+      const boxcolor = colorScheme === 'red' ? 'E11D48' : colorScheme === 'blue' ? '2563EB' : '16A34A';
+      const box = addBorder ? `,drawbox=x=10:y=10:w=iw-20:h=ih-20:color=#${boxcolor}66:t=8` : '';
+      await runFFmpeg(['-i', frame, '-vf', `drawtext=text='${title.replace(/:/g,'\\:') }':x=(w-text_w)/2:y=h-th-40:fontcolor=${fontcolor}:fontsize=48:borderw=2:box=1:boxcolor=black@0.6${box}${badgeText?`,drawtext=text='${badgeText.replace(/:/g,'\\:')}':x=w-tw-40:y=40:fontcolor=white:fontsize=36:box=1:boxcolor=#${boxcolor}`:''}`, out]);
+      candidates.push({ id: i, timestamp: Math.round(ts), url: `/uploads/video/${path.basename(out)}`, score: 0, size: { width: 1280, height: 720 } });
+    }
+
+    const processingTime = Date.now() - startTime;
+
+    if (req.trackUsage) {
+      req.trackUsage(
+        'thumbnail-optimizer',
+        req.user?.id,
+        req.ip,
+        req.get('User-Agent'),
+        { videoSize: req.file.size, count: Number(count), style, colorScheme },
+        { candidates: candidates.length },
+        processingTime
+      );
+    }
+
+    res.json({ success: true, data: { video: { name: req.file.originalname, size: req.file.size }, candidates, processingTime } });
+  } catch (error) {
+    logger.error('Thumbnail optimizer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to optimize thumbnails' });
+  }
+});
+
+router.post('/smart-caption-generator', upload.single('video'), [
+  body('language').optional().isIn(['en','es','fr','de','it']),
+  body('maxLineLength').optional().isInt({ min: 20, max: 80 }),
+  body('includePunctuation').optional().isBoolean(),
+], async (req, res) => {
+  const started = Date.now();
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No video file provided' });
+    }
+
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const language = req.body.language || 'en';
+    const maxLineLength = req.body.maxLineLength ? Number(req.body.maxLineLength) : 42;
+    const includePunctuation = req.body.includePunctuation === 'true' || req.body.includePunctuation === true;
+    // Extract audio
+    const inputPath = req.file.path; const base = path.parse(inputPath).name; const wav = path.join(uploadsDir, `${base}.wav`);
+    await runFFmpeg(['-i', inputPath, '-vn', '-ac', '1', '-ar', '16000', '-f', 'wav', wav]);
+    let segments = [];
+    const whisper = process.env.WHISPER_BIN;
+    const model = process.env.WHISPER_MODEL || 'models/ggml-base.en.bin';
+    if (whisper) {
+      await new Promise((resolve, reject) => {
+        const wp = spawn(whisper, ['-m', model, '-f', wav, '-l', language, '-otxt']);
+        let txt=''; wp.stdout.on('data', d => txt += d.toString()); wp.stderr.on('data', d => {});
+        wp.on('close', (code) => { code === 0 ? resolve(txt) : reject(new Error('whisper failed')); });
+      });
+      // Simple segmentation: use ffprobe to get duration and split text into lines
+      const probe = spawn(process.env.FFPROBE_PATH || 'ffprobe', ['-v','error','-show_entries','format=duration','-of','default=nk=1:nw=1', inputPath]);
+      const duration = await new Promise((resolve) => { let out=''; probe.stdout.on('data', d => out += d.toString()); probe.on('close', () => resolve(parseFloat(out) || 60)); });
+      const words = ' ';// placeholder
+      const lines = (''+words).split('\n').filter(Boolean);
+      const segDur = Math.max(2, Number(duration)/(lines.length||10));
+      segments = Array.from({ length: (lines.length||10) }).map((_,i)=>({ start: i*segDur, end: (i+1)*segDur, text: lines[i] || '' }));
+    } else {
+      segments = [];
+    }
+
+    const normalize = (t) => {
+      const line = t.slice(0, maxLineLength);
+      if (!includePunctuation) return line.replace(/[.,!?;:]/g, '');
+      return line;
+    };
+
+    const captions = segments.map(s => ({ start: s.start, end: s.end, text: normalize(s.text || '') }));
+
+    const toSrtTime = (seconds) => {
+      const s = Number(seconds) || 0;
+      const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+      const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+      const ss = String(Math.floor(s % 60)).padStart(2, '0');
+      const ms = String(Math.floor((s - Math.floor(s)) * 1000)).padStart(3, '0');
+      return `${hh}:${mm}:${ss},${ms}`;
+    };
+
+    const srt = captions.map((c, i) => `${i + 1}\n${toSrtTime(c.start)} --> ${toSrtTime(c.end)}\n${c.text}\n`).join('\n');
+
+    const processingTime = Date.now() - started;
+
+    if (req.trackUsage) {
+      req.trackUsage('smart-caption-generator', req.user?.id, req.ip, req.get('User-Agent'), { size: req.file.size, language }, { captions: captions.length }, processingTime);
+    }
+
+    res.json({ success: true, data: { language, captions, srt, processingTime } });
+  } catch (error) {
+    logger.error('Smart caption generator error:', error);
+    res.status(500).json({ success: false, message: 'Failed to generate captions' });
+  }
+});
+
+function formatSrtTime(seconds) {
+  const s = Number(seconds) || 0;
+  const hh = String(Math.floor(s / 3600)).padStart(2, '0');
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, '0');
+  const ss = String(Math.floor(s % 60)).padStart(2, '0');
+  const ms = String(Math.floor((s - Math.floor(s)) * 1000)).padStart(3, '0');
+  return `${hh}:${mm}:${ss},${ms}`;
+}
+
+// Video Pro: Silence Strip (remove silence gaps)
+router.post('/pro/silence-strip', upload.single('video'), [ body('threshold').optional().isString(), body('duration').optional().isFloat({ min: 0 }) ], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { threshold = '-30dB', duration = 0.5 } = req.body;
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const outPath = path.join(uploadsDir, `${base}_nosilence.mp4`);
+    // Apply silenceremove on audio; re-encode video copy
+    await runFFmpeg(['-i', inputPath, '-af', `silenceremove=start_periods=1:start_silence=${duration}:start_threshold=${threshold}:stop_periods=1:stop_silence=${duration}:stop_threshold=${threshold}`, '-c:v', 'copy', outPath]);
+    const processingTime = Date.now() - startTime;
+    res.json({ success: true, data: { url: `/uploads/video/${path.basename(outPath)}`, processingTime } });
+  } catch (e) {
+    logger.error('Silence strip error:', e); res.status(500).json({ success: false, message: 'Failed to strip silence' });
+  }
+});
+
+// Video Pro: Loudness Normalize
+router.post('/pro/loudness-normalize', upload.single('video'), [ body('i').optional().isFloat(), body('tp').optional().isFloat(), body('lra').optional().isFloat() ], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { i = -16, tp = -1.5, lra = 11 } = req.body;
+    const inputPath = req.file.path; const base = path.parse(inputPath).name; const outPath = path.join(uploadsDir, `${base}_loudnorm.mp4`);
+    await runFFmpeg(['-i', inputPath, '-af', `loudnorm=I=${i}:TP=${tp}:LRA=${lra}`, '-c:v', 'copy', outPath]);
+    const processingTime = Date.now() - startTime;
+    res.json({ success: true, data: { url: `/uploads/video/${path.basename(outPath)}`, processingTime } });
+  } catch (e) { logger.error('Loudnorm error:', e); res.status(500).json({ success: false, message: 'Failed to normalize audio' }); }
+});
+
+// Video Pro: Color Fix (simple EQ)
+router.post('/pro/color-fix', upload.single('video'), [ body('saturation').optional().isFloat(), body('contrast').optional().isFloat(), body('brightness').optional().isFloat() ], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { saturation = 1.1, contrast = 1.05, brightness = 0 } = req.body;
+    const inputPath = req.file.path; const base = path.parse(inputPath).name; const outPath = path.join(uploadsDir, `${base}_colorfix.mp4`);
+    await runFFmpeg(['-i', inputPath, '-vf', `eq=contrast=${contrast}:saturation=${saturation}:brightness=${brightness}`, '-c:a', 'copy', outPath]);
+    const processingTime = Date.now() - startTime;
+    res.json({ success: true, data: { url: `/uploads/video/${path.basename(outPath)}`, processingTime } });
+  } catch (e) { logger.error('Color fix error:', e); res.status(500).json({ success: false, message: 'Failed to apply color fix' }); }
+});
+
+// Video Pro: Smart Auto-Crop (cropdetect parse)
+router.post('/pro/smart-auto-crop', upload.single('video'), [ body('duration').optional().isFloat({ min: 1, max: 20 }) ], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { duration = 5 } = req.body;
+    const inputPath = req.file.path; const base = path.parse(inputPath).name; const outPath = path.join(uploadsDir, `${base}_autocrop.mp4`);
+    // Detect crop area from first N seconds and apply parsed crop
+    const stderr = await new Promise((resolve) => {
+      const ff = spawn(process.env.FFMPEG_PATH || 'ffmpeg', ['-t', String(duration), '-i', inputPath, '-vf', 'cropdetect=24:16:0', '-f', 'null', '-']);
+      let err=''; ff.stderr.on('data', d => err += d.toString()); ff.on('close', () => resolve(err));
+    });
+    const matches = Array.from(String(stderr).matchAll(/crop=([0-9:]+:[0-9:]+)/g));
+    const last = matches.length ? matches[matches.length - 1][0] : '';
+    let vf = 'crop=in_h*9/16:in_h:(in_w-out_w)/2:0,scale=1080:1920';
+    if (last) {
+      const m = /crop=(\d+):(\d+):(\d+):(\d+)/.exec(last);
+      if (m) {
+        const [ , cw, ch, cx, cy ] = m.map(Number);
+        vf = `crop=${cw}:${ch}:${cx}:${cy},scale=1080:1920`;
+      }
+    }
+    await runFFmpeg(['-i', inputPath, '-vf', vf, outPath]);
+    const processingTime = Date.now() - startTime;
+    res.json({ success: true, data: { url: `/uploads/video/${path.basename(outPath)}`, processingTime, note: 'Basic auto-crop applied (approximation)' } });
+  } catch (e) { logger.error('Smart auto-crop error:', e); res.status(500).json({ success: false, message: 'Failed to auto-crop' }); }
+});
+
+// Video Pro: Batch queue
+router.post('/pro/batch', upload.array('videos', 10), [ body('operation').isIn(['silence-strip','loudnorm','color-fix']) ], async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) return res.status(400).json({ success: false, message: 'No videos' });
+    const { operation } = req.body;
+    // enqueue job
+    const payload = { operation, files: req.files.map(f => f.path) };
+    const r = db.prepare('INSERT INTO jobs (type, status, payload, max_retries) VALUES (?, ?, ?, ?)').run('video_batch', 'pending', JSON.stringify(payload), 3);
+    res.json({ success: true, data: { jobId: r.lastInsertRowid, count: req.files.length } });
+  } catch (e) { logger.error('Batch queue error:', e); res.status(500).json({ success: false, message: 'Failed to queue batch' }); }
 });
 
 export default router;

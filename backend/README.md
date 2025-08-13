@@ -113,6 +113,27 @@ The server will start on `http://localhost:3001`
 | `MAX_FILE_SIZE` | Max upload size | 10485760 (10MB) |
 | `FRONTEND_URL` | Frontend URL for CORS | http://localhost:5173 |
 
+### Optional: Postgres + ClamAV
+
+To run with Postgres, set:
+
+```
+DATABASE_URL=postgres://user:password@host:5432/dbname
+```
+
+Run migrations to create the schema in Postgres (mirror of SQLite tables). Update `initializeDatabase` to connect via `pg` when `DATABASE_URL` starts with `postgres://`.
+
+To enable ClamAV scanning on uploads, install clamav-daemon and set:
+
+```
+ENABLE_AV_SCAN=true
+CLAMDSCAN_BIN=/usr/bin/clamdscan
+```
+
+### TCF v2 CMP
+
+Set `cmp_mode` to `tcfv2` in Admin → Settings. Include your CMP’s TCF v2 script (e.g., Sourcepoint/Didomi) in Admin “Ad Header Code”. Our `AdSlot` will wait for `__tcfapi('getTCData')` and only render ads with Purpose 1 consent.
+
 ### Database Schema
 
 The backend uses SQLite with the following main tables:

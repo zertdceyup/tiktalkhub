@@ -227,6 +227,28 @@ export const createInvoicePDF = async (invoiceData) => {
       color: textColor
     });
 
+    // Optional logo (data URL base64)
+    if (invoiceData.businessInfo?.logoDataUrl) {
+      try {
+        const dataUrl = invoiceData.businessInfo.logoDataUrl;
+        const base64 = dataUrl.split(',')[1];
+        const bytes = Uint8Array.from(Buffer.from(base64, 'base64'));
+        let embeddedImage;
+        if (dataUrl.startsWith('data:image/png')) {
+          embeddedImage = await pdfDoc.embedPng(bytes);
+        } else {
+          embeddedImage = await pdfDoc.embedJpg(bytes);
+        }
+        const imgDims = embeddedImage.scale(0.25);
+        page.drawImage(embeddedImage, {
+          x: width - 200,
+          y: yPosition - imgDims.height - 5,
+          width: imgDims.width,
+          height: imgDims.height
+        });
+      } catch {}
+    }
+
     yPosition -= 60;
 
     // Business Info
@@ -341,7 +363,7 @@ export const createInvoicePDF = async (invoiceData) => {
     });
 
     page.drawText('Qty', {
-      x: 350,
+      x: 320,
       y: yPosition + 5,
       size: 10,
       font: boldFont,
@@ -349,7 +371,15 @@ export const createInvoicePDF = async (invoiceData) => {
     });
 
     page.drawText('Rate', {
-      x: 400,
+      x: 360,
+      y: yPosition + 5,
+      size: 10,
+      font: boldFont,
+      color: textColor
+    });
+
+    page.drawText('Disc%', {
+      x: 410,
       y: yPosition + 5,
       size: 10,
       font: boldFont,
@@ -387,22 +417,30 @@ export const createInvoicePDF = async (invoiceData) => {
       });
 
       page.drawText(item.quantity.toString(), {
-        x: 360,
+        x: 330,
         y: yPosition,
         size: 9,
         font: font,
         color: textColor
       });
 
-      page.drawText(`$${item.rate}`, {
-        x: 400,
+      page.drawText(`${invoiceData.currencySymbol}${item.rate}`, {
+        x: 370,
         y: yPosition,
         size: 9,
         font: font,
         color: textColor
       });
 
-      page.drawText(`$${item.total}`, {
+      page.drawText(`${(item.discountPct || 0).toFixed ? (item.discountPct).toFixed(0) : item.discountPct || 0}%`, {
+        x: 420,
+        y: yPosition,
+        size: 9,
+        font: font,
+        color: textColor
+      });
+
+      page.drawText(`${invoiceData.currencySymbol}${item.total}`, {
         x: 480,
         y: yPosition,
         size: 9,
@@ -416,7 +454,19 @@ export const createInvoicePDF = async (invoiceData) => {
     yPosition -= 20;
 
     // Totals
-    page.drawText(`Subtotal: $${invoiceData.subtotal}`, {
+    // Overall discount
+    if (invoiceData.discountPct && Number(invoiceData.discountPct) > 0) {
+      page.drawText(`Discount (${invoiceData.discountPct}%): -${invoiceData.currencySymbol}${invoiceData.discountAmount}`, {
+        x: 360,
+        y: yPosition,
+        size: 10,
+        font: font,
+        color: textColor
+      });
+      yPosition -= 20;
+    }
+
+    page.drawText(`Subtotal: ${invoiceData.currencySymbol}${invoiceData.subtotal}`, {
       x: 400,
       y: yPosition,
       size: 10,
@@ -426,7 +476,8 @@ export const createInvoicePDF = async (invoiceData) => {
 
     yPosition -= 20;
 
-    page.drawText(`Tax: $${invoiceData.tax}`, {
+    const taxLabel = invoiceData.taxMode === 'inclusive' ? 'Included Tax' : 'Tax';
+    page.drawText(`${taxLabel}: ${invoiceData.currencySymbol}${invoiceData.tax}`, {
       x: 400,
       y: yPosition,
       size: 10,
@@ -436,7 +487,7 @@ export const createInvoicePDF = async (invoiceData) => {
 
     yPosition -= 20;
 
-    page.drawText(`Total: $${invoiceData.total}`, {
+    page.drawText(`Total: ${invoiceData.currencySymbol}${invoiceData.total}`, {
       x: 400,
       y: yPosition,
       size: 12,
@@ -479,3 +530,88 @@ export const createInvoicePDF = async (invoiceData) => {
     throw new Error('Failed to generate invoice PDF');
   }
 };
+
+export const createBusinessPlanPDF = async (plan) => {
+  try {
+    const pdfDoc = await PDFDocument.create();
+    const pageSize = [612, 792];
+    const margin = 50;
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const primaryColor = rgb(0.2, 0.3, 0.5);
+    const textColor = rgb(0.1, 0.1, 0.1);
+
+    const drawWrappedText = (page, text, x, y, maxWidth, font, size, color) => {
+      const words = text.split(/\s+/);
+      let line = '';
+      let cursorY = y;
+      const lineHeight = size + 4;
+      const lines = [];
+      for (const w of words) {
+        const test = line ? line + ' ' + w : w;
+        const width = font.widthOfTextAtSize(test, size);
+        if (width > maxWidth && line) {
+          lines.push(line);
+          line = w;
+        } else {
+          line = test;
+        }
+      }
+      if (line) lines.push(line);
+      lines.forEach((ln) => {
+        page.drawText(ln, { x, y: cursorY, size, font, color });
+        cursorY -= lineHeight;
+      });
+      return cursorY;
+    };
+
+    let page = pdfDoc.addPage(pageSize);
+    let { width, height } = page.getSize();
+    let y = height - margin;
+
+    // Title
+    page.drawText(plan.title || 'Business Plan', { x: margin, y, size: 18, font: boldFont, color: primaryColor });
+    y -= 24;
+
+    if (plan.meta?.businessName) {
+      page.drawText(plan.meta.businessName, { x: margin, y, size: 12, font: font, color: textColor });
+      y -= 18;
+    }
+
+    const sections = plan.sections || {};
+    const maxWidth = width - margin * 2;
+
+    const ensureSpace = (need) => {
+      if (y - need < margin) {
+        page = pdfDoc.addPage(pageSize);
+        ({ width, height } = page.getSize());
+        y = height - margin;
+      }
+    };
+
+    for (const [sectionTitle, content] of Object.entries(sections)) {
+      ensureSpace(40);
+      page.drawText(sectionTitle, { x: margin, y, size: 14, font: boldFont, color: primaryColor });
+      y -= 18;
+      const paragraphs = String(content || '').split(/\n\n+/);
+      for (const p of paragraphs) {
+        const need = 100;
+        ensureSpace(need);
+        y = drawWrappedText(page, p.trim(), margin, y, maxWidth, font, 11, textColor) - 6;
+      }
+    }
+
+    const pdfBytes = await pdfDoc.save();
+    return Buffer.from(pdfBytes);
+  } catch (error) {
+    logger.error('Business plan PDF generation error:', error);
+    throw new Error('Failed to generate business plan PDF');
+  }
+};
+
+export default aiService;
+export const generateText = (prompt, options) => aiService.generateText(prompt, options);
+export const analyzeSentiment = (text) => aiService.analyzeSentiment(text);
+export const extractKeywords = (text, count) => aiService.extractKeywords(text, count);
+export const analyzeReadability = (text) => aiService.analyzeReadability(text);
+export const suggestTools = (query) => aiService.suggestTools(query);

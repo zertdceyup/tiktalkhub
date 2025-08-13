@@ -46,12 +46,11 @@ const BlogIdeaGenerator: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <SEO title="Blog Idea Generator | Tiktalkhub" description="Generate SEO-friendly blog ideas with metadata, copy-all and CSV export."
-        keywords={["blog ideas","content strategy","SEO topics"]}
+      <SEO
+        title="Blog Idea Generator | Content Tools | Tiktalkhub"
+        description="Generate engaging, SEO-friendly blog ideas for any niche and audience."
+        keywords={["blog idea generator","content ideas","SEO blog topics"]}
         canonical="/tools/content/blog-idea-generator"
-        openGraph={{ title: 'Blog Idea Generator | Tiktalkhub', description: 'Generate SEO-friendly blog ideas', type: 'website', url: window.location.href }}
-        twitter={{ card: 'summary_large_image', title: 'Blog Idea Generator | Tiktalkhub', description: 'Generate SEO-friendly blog ideas' }}
-        jsonLd={jsonLd}
       />
       <Header />
       <section className="py-16">

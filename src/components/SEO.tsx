@@ -1,5 +1,12 @@
 import React, { useEffect } from 'react';
 
+function ogUrlFromTitle(title?: string, subtitle?: string) {
+  if (!title) return undefined;
+  const base = import.meta.env.VITE_API_URL?.replace('/api','') || 'http://localhost:3001';
+  const url = `${base}/api/og-image?title=${encodeURIComponent(title)}${subtitle ? `&subtitle=${encodeURIComponent(subtitle)}` : ''}`;
+  return url;
+}
+
 export interface SEOProps {
   title: string;
   description?: string;
@@ -87,7 +94,36 @@ const SEO: React.FC<SEOProps> = ({ title, description, keywords, canonical, open
     };
   }, [title, description, JSON.stringify(keywords), canonical, JSON.stringify(openGraph), JSON.stringify(twitter), JSON.stringify(jsonLd)]);
 
-  return null;
+  const jsonLdStr = jsonLd ? JSON.stringify(jsonLd) : '';
+  const defaultOg = ogUrlFromTitle(title, (openGraph as any)?.description || description);
+  return (
+    <>
+      <title>{title}</title>
+      <meta name="description" content={description} />
+      {keywords && <meta name="keywords" content={Array.isArray(keywords) ? keywords.join(', ') : keywords} />}
+      {canonical && <link rel="canonical" href={canonical.startsWith('http') ? canonical : `${window.location.origin}${canonical}`} />}
+      {openGraph && (
+        <>
+          <meta property="og:title" content={openGraph.title || title} />
+          <meta property="og:description" content={openGraph.description || description} />
+          <meta property="og:type" content={openGraph.type || 'website'} />
+          <meta property="og:url" content={openGraph.url || (typeof window !== 'undefined' ? window.location.href : '')} />
+          <meta property="og:image" content={openGraph.image || defaultOg} />
+        </>
+      )}
+      {twitter && (
+        <>
+          <meta name="twitter:card" content={twitter.card || 'summary_large_image'} />
+          <meta name="twitter:title" content={twitter.title || title} />
+          <meta name="twitter:description" content={twitter.description || description} />
+          <meta name="twitter:image" content={twitter.image || defaultOg} />
+        </>
+      )}
+      {jsonLd && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdStr }} />
+      )}
+    </>
+  );
 };
 
 export default SEO;

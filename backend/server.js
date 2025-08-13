@@ -7,6 +7,7 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createCanvas, registerFont } from 'canvas';
 
 // Import routes
 import authRoutes from './routes/auth.js';
@@ -22,7 +23,8 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { authenticateToken } from './middleware/auth.js';
 
 // Import database initialization
-import { initializeDatabase } from './database/init.js';
+import { initializeDatabase, allSQL } from './database/init.js';
+import { startQueue } from './services/queue.js';
 
 // Import logger
 import logger from './utils/logger.js';
@@ -49,7 +51,7 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://pagead2.googlesyndication.com"],
       connectSrc: ["'self'", "https://api.openai.com"]
     }
   }
@@ -97,6 +99,140 @@ app.get('/health', (req, res) => {
   });
 });
 
+// robots.txt
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *\nAllow: /\nSitemap: ${process.env.FRONTEND_URL || 'http://localhost:5173'}/sitemap.xml`);
+});
+
+// sitemap.xml (basic)
+app.get('/sitemap.xml', (req, res) => {
+  const base = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const urls = [
+    '/', '/about','/contact','/blog',
+    '/tools/smartbiz','/tools/career','/tools/video','/tools/social','/tools/tiktok','/tools/general','/tools/pdf',
+    '/tools/smartbiz/business-name-generator','/tools/smartbiz/slogan-creator','/tools/smartbiz/logo-sketch-wizard','/tools/smartbiz/smart-flyer-designer','/tools/smartbiz/invoice-maker','/tools/smartbiz/business-plan-generator',
+    '/tools/career/resume-builder','/tools/career/cover-letter-ai','/tools/career/linkedin-summary','/tools/career/interview-coach','/tools/career/job-match-optimizer',
+    '/tools/video/trimmer','/tools/video/thumbnail-selector','/tools/video/gif-maker','/tools/video/shorts-vertical-cropper','/tools/video/caption-overlay','/tools/video/noise-remover','/tools/video/batch-trimmer','/tools/video/thumbnail-optimizer','/tools/video/smart-caption-generator',
+    '/tools/social/hashtag-generator','/tools/social/twitter-thread-formatter','/tools/social/facebook-caption-creator','/tools/social/bio-link-builder','/tools/social/link-shortener',
+    '/tools/utility/qr-code-generator','/tools/utility/image-optimizer','/tools/utility/pdf-merger','/tools/utility/youtube-thumbnail-downloader','/tools/utility/pdf-splitter','/tools/utility/pdf-password-protector','/tools/utility/pdf-to-image',
+    '/tools/general/twitter-thread-previewer','/tools/general/image-remixer','/tools/content/text-summarizer','/tools/content/text-to-speech','/tools/content/blog-idea-generator','/tools/content/headline-analyzer','/tools/content/caption-generator'
+  ];
+  const body = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls.map(u => `<url><loc>${base}${u}</loc></url>`).join('\n')}\n</urlset>`;
+  res.type('application/xml').send(body);
+});
+
+// dynamic OG image endpoint (real rendering)
+app.get('/api/og-image', async (req, res) => {
+  try {
+    const { title = 'Tiktalkhub', subtitle = '' } = req.query;
+    const width = 1200, height = 630;
+    const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext('2d');
+
+    // Background gradient
+    const grad = ctx.createLinearGradient(0, 0, width, height);
+    grad.addColorStop(0, '#0f0c29');
+    grad.addColorStop(0.5, '#302b63');
+    grad.addColorStop(1, '#24243e');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, width, height);
+
+    // Title
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 64px Arial';
+    const t = String(title);
+    const tw = ctx.measureText(t).width;
+    ctx.fillText(t, (width - tw) / 2, height / 2 - 20);
+
+    // Subtitle / brand
+    ctx.fillStyle = '#a78bfa';
+    ctx.font = 'normal 32px Arial';
+    const s = subtitle ? String(subtitle) : 'tiktalkhub.com';
+    const sw = ctx.measureText(s).width;
+    ctx.fillText(s, (width - sw) / 2, height / 2 + 40);
+
+    const buf = canvas.toBuffer('image/png');
+    res.setHeader('Content-Type', 'image/png');
+    res.send(buf);
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to render OG image' });
+  }
+});
+
+// Ad view beacon
+app.post('/ad-view', express.text({ type: '*/*' }), (req, res) => {
+  try {
+    const payload = JSON.parse(req.body || '{}');
+    const ms = Number(payload.ms) || 0;
+    const slot = String(payload.id || '');
+    if (ms > 0 && slot) {
+      const stmt = db.prepare('INSERT INTO ad_views (slot_id, view_ms, user_agent, ip_address) VALUES (?, ?, ?, ?)');
+      stmt.run(slot, ms, req.get('User-Agent') || '', req.ip);
+    }
+  } catch {}
+  res.status(204).end();
+});
+
+// Public settings (read-only subset)
+app.get('/api/public/settings', async (req, res) => {
+  try {
+    const rows = await allSQL('SELECT key, value, category FROM admin_settings WHERE key IN ("site_name","site_description","enable_ai_features","enable_local_ai","tiko_persona","tiko_suggestions_enabled","posts_home_count","posts_sidebar_count","ad_header_code","ad_footer_code","adsense_client","adsense_slot","cmp_mode","search_console_meta")');
+    const settings = rows.reduce((acc, r) => { acc[r.key] = r.value; return acc; }, {});
+    res.json({ success: true, settings });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch public settings' });
+  }
+});
+
+// Public page blocks
+app.get('/api/public/page-blocks', async (req, res) => {
+  try {
+    const path = req.query.path || '';
+    const sql = path ? 'SELECT * FROM page_blocks WHERE page_path = ? ORDER BY position' : 'SELECT * FROM page_blocks ORDER BY page_path, position';
+    const rows = await allSQL(sql, path ? [path] : []);
+    res.json({ success: true, blocks: rows.map(b => ({ ...b, config: safeParse(b.config_json) })) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch blocks' });
+  }
+});
+
+// Public brand kit (simple: latest kit)
+app.get('/api/public/brand-kit', async (req, res) => {
+  try {
+    const rows = await allSQL('SELECT * FROM brand_kits ORDER BY updated_at DESC LIMIT 1');
+    const kit = rows[0] || null;
+    if (!kit) return res.json({ success: true, kit: null });
+    res.json({ success: true, kit: { id: kit.id, name: kit.name, colors: safeParse(kit.colors_json), fonts: safeParse(kit.fonts_json), logo_url: kit.logo_url, watermark_url: kit.watermark_url } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch brand kit' });
+  }
+});
+
+// Public blog curation
+app.get('/api/public/blog-curation', async (req, res) => {
+  try {
+    const context = String(req.query.context || '');
+    if (!context) return res.json({ success: true, rules: [] });
+    const rows = await allSQL('SELECT * FROM blog_curation WHERE context = ? ORDER BY updated_at DESC', [context]);
+    res.json({ success: true, rules: rows.map(r => ({ id: r.id, context: r.context, rule: safeParse(r.rule_json) })) });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch curation' });
+  }
+});
+
+// Public FAQs per page
+app.get('/api/public/faqs', async (req, res) => {
+  try {
+    const pagePath = String(req.query.path || '');
+    if (!pagePath) return res.json({ success: true, faqs: [] });
+    const rows = await allSQL('SELECT * FROM faqs WHERE page_path = ? ORDER BY updated_at DESC LIMIT 1', [pagePath]);
+    const items = rows[0]?.items_json ? JSON.parse(rows[0].items_json) : [];
+    res.json({ success: true, faqs: items });
+  } catch (e) { res.status(500).json({ success: false, message: 'Failed to fetch FAQs' }); }
+});
+
+function safeParse(s) { try { return JSON.parse(s || '{}'); } catch { return {}; } }
+
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', authenticateToken, adminRoutes);
@@ -143,6 +279,7 @@ app.listen(PORT, () => {
   logger.info(`🚀 Tiktalkhub Backend Server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV}`);
   logger.info(`🔗 Frontend URL: ${process.env.FRONTEND_URL}`);
+  startQueue();
 });
 
 export default app;

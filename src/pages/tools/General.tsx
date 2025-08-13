@@ -2,6 +2,8 @@ import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import TikoAI from '@/components/TikoAI';
+import SEO from '@/components/SEO';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +11,7 @@ import {
   Settings, Download, Upload, Search, 
   FileText, Calculator, QrCode, ArrowRight, TrendingUp 
 } from 'lucide-react';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const GeneralTools = () => {
   const tools = [
@@ -17,96 +20,80 @@ const GeneralTools = () => {
       description: "Download high-quality thumbnails from any YouTube video",
       icon: Download,
       features: ["HD quality", "Multiple formats", "Instant download"],
-      popular: true
+      popular: true,
+      route: "/tools/utility/youtube-thumbnail-downloader"
     },
     {
       name: "Twitter Thread Previewer",
       description: "Preview how your Twitter thread will look before posting",
       icon: FileText,
-      features: ["Real-time preview", "Character count", "Thread formatting"]
+      features: ["Real-time preview", "Character count", "Thread formatting"],
+      route: "/tools/general/twitter-thread-previewer"
     },
     {
       name: "Image Remixer",
       description: "Transform and remix images with AI-powered effects",
       icon: Upload,
       features: ["AI-powered", "Multiple styles", "Batch processing"],
-      popular: true
+      popular: true,
+      route: "/tools/general/image-remixer"
     },
     {
       name: "Text Summarizer",
       description: "Condense long texts into key points instantly",
       icon: FileText,
-      features: ["AI summarization", "Key points extraction", "Multiple lengths"]
+      features: ["AI summarization", "Key points extraction", "Multiple lengths"],
+      route: "/tools/content/text-summarizer"
     },
     {
       name: "Voice Notes to Text",
       description: "Convert voice recordings to accurate text transcriptions",
       icon: Search,
       features: ["High accuracy", "Multiple languages", "Fast processing"],
-      popular: true
+      popular: true,
+      route: "/tools/content/voice-notes-to-text"
     },
     {
       name: "QR Code Generator",
       description: "Create custom QR codes for any purpose",
       icon: QrCode,
-      features: ["Custom designs", "Multiple formats", "Bulk generation"]
+      features: ["Custom designs", "Multiple formats", "Bulk generation"],
+      route: "/tools/utility/qr-code-generator"
     }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "Essential Digital Tools for 2025",
-      excerpt: "Discover the must-have digital tools that will transform your productivity this year.",
-      readTime: "8 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop"
-    },
-    {
-      id: 2,
-      title: "Workflow Automation Secrets",
-      excerpt: "Learn how to automate repetitive tasks and focus on what matters most.",
-      readTime: "6 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&h=300&fit=crop"
-    },
-    {
-      id: 3,
-      title: "Digital Organization Tips",
-      excerpt: "Master the art of digital organization with these proven strategies.",
-      readTime: "7 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1500673922987-e212871fec22?w=400&h=300&fit=crop"
-    },
-    {
-      id: 4,
-      title: "Time-Saving Tool Combinations",
-      excerpt: "Discover powerful tool combinations that work together seamlessly.",
-      readTime: "9 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=300&fit=crop"
-    },
-    {
-      id: 5,
-      title: "Future of Digital Productivity",
-      excerpt: "Explore upcoming trends in digital productivity and automation.",
-      readTime: "10 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=400&h=300&fit=crop"
-    },
-    {
-      id: 6,
-      title: "Cross-Platform Integration Guide",
-      excerpt: "Learn how to integrate tools across different platforms for maximum efficiency.",
-      readTime: "12 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop"
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:general', fallbackLimit: 6 });
+
+  const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+  const collection = {
+    '@type': 'CollectionPage',
+    name: 'General Tools',
+    url: typeof window !== 'undefined' ? window.location.href : '',
+    hasPart: tools.map(t => ({ '@type': 'SoftwareApplication', name: t.name, applicationCategory: 'UtilitiesApplication', operatingSystem: 'Web', url: `${baseUrl}${t.route}` }))
+  };
+  const articles = (blogPosts || []).map((p: any) => ({
+    '@type': 'Article',
+    headline: p.title,
+    description: p.excerpt,
+    image: p.featured_image ? [p.featured_image] : undefined,
+    author: { '@type': 'Organization', name: 'Tiktalkhub' },
+    mainEntityOfPage: { '@type': 'WebPage', '@id': typeof window !== 'undefined' ? window.location.href : '' }
+  }));
+  const jsonLd = { '@context': 'https://schema.org', '@graph': [collection, ...articles] };
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="General Tools | Tiktalkhub"
+        description="Handy utility tools including QR code, image optimizer, and more."
+        keywords={["qr code generator","image optimizer","meme generator","file tools"]}
+        canonical="/tools/general"
+        jsonLd={jsonLd}
+      />
       <Header />
+      <div className="container mx-auto px-6">
+        <Breadcrumbs trail={[{ name: 'Home', href: '/' }, { name: 'General Tools' }]} jsonLdBaseUrl={baseUrl} />
+      </div>
       
       {/* Hero Section */}
       <section className="py-20 relative overflow-hidden">
@@ -172,7 +159,7 @@ const GeneralTools = () => {
                       </li>
                     ))}
                   </ul>
-                  <Button className="w-full" variant="outline">
+                  <Button className="w-full" variant="outline" onClick={() => (tool as any).route ? window.location.assign((tool as any).route) : null}>
                     Try Now
                   </Button>
                 </CardContent>
@@ -193,20 +180,18 @@ const GeneralTools = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer overflow-hidden">
                 <div className="aspect-video overflow-hidden">
                   <img 
-                    src={post.image} 
+                    src={post.featured_image} 
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending

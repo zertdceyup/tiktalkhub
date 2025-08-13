@@ -1,0 +1,105 @@
+import React, { useEffect, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+
+const PageRenderer: React.FC = () => {
+  const { pathname } = useLocation();
+  const [blocks, setBlocks] = useState<any[]>([]);
+  const [faqs, setFaqs] = useState<any[]>([]);
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/public/page-blocks?path=${encodeURIComponent(pathname)}`);
+      const json = await res.json();
+      setBlocks(json.blocks || []);
+    })();
+    (async () => {
+      const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/public/faqs?path=${encodeURIComponent(pathname)}`);
+      const j = await res.json();
+      setFaqs(j.faqs || []);
+    })();
+  }, [pathname]);
+
+  const renderBlock = (b: any) => {
+    const cfg = b.config || {};
+    switch (b.block_type) {
+      case 'ab-test': {
+        const cfgA = (cfg && cfg.variantA) || {};
+        const cfgB = (cfg && cfg.variantB) || {};
+        const key = `ab_${b.id}`;
+        let v = localStorage.getItem(key) || (Math.random() < 0.5 ? 'A' : 'B');
+        localStorage.setItem(key, v);
+        const active = v === 'A' ? cfgA : cfgB;
+        return (
+          <section key={b.id} className="py-6">
+            <div className="container mx-auto px-6">
+              <div className="border rounded p-4">A/B Variant {v}: {active.title || 'Untitled'}</div>
+            </div>
+          </section>
+        );
+      }
+      case 'hero':
+        return (
+          <section key={b.id} className="py-16">
+            <div className="container mx-auto px-6 text-center">
+              <h1 className="text-4xl font-bold mb-4">{cfg.title || 'Hero Title'}</h1>
+              <p className="text-muted-foreground">{cfg.subtitle || ''}</p>
+            </div>
+          </section>
+        );
+      case 'ad':
+        return (
+          <div key={b.id} className="container mx-auto px-6 my-6">
+            <div className="border rounded h-24 flex items-center justify-center text-xs text-muted-foreground">Ad Slot ({cfg.id || 'slot'})</div>
+          </div>
+        );
+      case 'tools-grid':
+        return (
+          <section key={b.id} className="py-12">
+            <div className="container mx-auto px-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {(cfg.tools || []).map((t: any, i: number) => (
+                  <a key={i} href={t.href} className="tiktok-card p-4 block">
+                    <div className="font-medium">{t.name}</div>
+                    <div className="text-sm text-muted-foreground">{t.description}</div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </section>
+        );
+      case 'blog':
+        return (
+          <section key={b.id} className="py-12 bg-secondary/30">
+            <div className="container mx-auto px-6">
+              <h2 className="text-2xl font-bold mb-4">{cfg.title || 'Latest Posts'}</h2>
+              {/* In a full impl, fetch category/limit; using client BlogSection or api.getBlogPosts */}
+            </div>
+          </section>
+        );
+      default:
+        return null;
+    }
+  };
+
+  if (!blocks.length && !faqs.length) return null;
+  return <>
+    {blocks.map(renderBlock)}
+    {faqs.length > 0 && (
+      <section className="py-12">
+        <div className="container mx-auto px-6">
+          <h2 className="text-2xl font-bold mb-4">Frequently Asked Questions</h2>
+          <div className="space-y-4">
+            {faqs.map((f: any, i: number) => (
+              <div key={i} className="border rounded p-4">
+                <div className="font-medium">{f.q}</div>
+                <div className="text-sm text-muted-foreground">{f.a}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+  </>;
+};
+
+export default PageRenderer;

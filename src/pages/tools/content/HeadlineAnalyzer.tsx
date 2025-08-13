@@ -35,12 +35,11 @@ const HeadlineAnalyzer: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <SEO title="Headline Analyzer | Tiktalkhub" description="Analyze and improve headlines with scoring, suggestions, and alternatives."
+      <SEO
+        title="Headline Analyzer | Content Tools | Tiktalkhub"
+        description="Analyze and improve your headlines with sentiment, power words, readability and more."
         keywords={["headline analyzer","title score","copy optimization"]}
         canonical="/tools/content/headline-analyzer"
-        openGraph={{ title: 'Headline Analyzer | Tiktalkhub', description: 'Analyze and improve headlines', type: 'website', url: window.location.href }}
-        twitter={{ card: 'summary_large_image', title: 'Headline Analyzer | Tiktalkhub', description: 'Analyze and improve headlines' }}
-        jsonLd={jsonLd}
       />
       <Header />
       <section className="py-16">

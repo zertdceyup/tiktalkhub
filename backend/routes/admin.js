@@ -3,6 +3,7 @@ import { body, validationResult } from 'express-validator';
 import db from '../database/init.js';
 import { requireAdmin } from '../middleware/auth.js';
 import logger from '../utils/logger.js';
+import { allSQL } from '../database/init.js';
 
 const router = express.Router();
 
@@ -699,6 +700,312 @@ router.post('/notifications', [
       success: false,
       message: 'Failed to create notification'
     });
+  }
+});
+
+// Templates Management
+router.get('/templates', (req, res) => {
+  try {
+    const templates = db.prepare('SELECT * FROM templates ORDER BY created_at DESC').all();
+    res.json({ success: true, templates });
+  } catch (e) {
+    logger.error('Templates fetch error:', e);
+    res.status(500).json({ success: false, message: 'Failed to fetch templates' });
+  }
+});
+
+router.post('/templates', [
+  body('name').isLength({ min: 1, max: 100 }),
+  body('type').isLength({ min: 1, max: 50 }),
+  body('category').optional().isLength({ max: 50 }),
+  body('file_path').optional().isString(),
+  body('thumbnail_path').optional().isString(),
+  body('config').optional().isString()
+], (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { name, type, category, file_path, thumbnail_path, config } = req.body;
+    const result = db.prepare(`INSERT INTO templates (name, type, category, file_path, thumbnail_path, config) VALUES (?, ?, ?, ?, ?, ?)`)
+      .run(name, type, category || null, file_path || null, thumbnail_path || null, config || null);
+    res.status(201).json({ success: true, templateId: result.lastInsertRowid });
+  } catch (e) {
+    logger.error('Template create error:', e);
+    res.status(500).json({ success: false, message: 'Failed to create template' });
+  }
+});
+
+router.put('/templates/:id', [
+  body('name').optional().isLength({ min: 1, max: 100 }),
+  body('type').optional().isLength({ min: 1, max: 50 }),
+  body('category').optional().isLength({ max: 50 }),
+  body('file_path').optional().isString(),
+  body('thumbnail_path').optional().isString(),
+  body('config').optional().isString()
+], (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { id } = req.params;
+    const updates = req.body;
+    if (Object.keys(updates).length === 0) return res.status(400).json({ success: false, message: 'No fields to update' });
+    const setClause = Object.keys(updates).map(k => `${k} = ?`).join(', ');
+    const params = [...Object.values(updates), new Date().toISOString(), id];
+    const result = db.prepare(`UPDATE templates SET ${setClause}, updated_at = ? WHERE id = ?`).run(...params);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Template not found' });
+    res.json({ success: true, message: 'Template updated' });
+  } catch (e) {
+    logger.error('Template update error:', e);
+    res.status(500).json({ success: false, message: 'Failed to update template' });
+  }
+});
+
+router.delete('/templates/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = db.prepare('DELETE FROM templates WHERE id = ?').run(id);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Template not found' });
+    res.json({ success: true, message: 'Template deleted' });
+  } catch (e) {
+    logger.error('Template delete error:', e);
+    res.status(500).json({ success: false, message: 'Failed to delete template' });
+  }
+});
+
+// Page Settings (design tokens per page)
+router.get('/page-settings', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM page_settings').all();
+    res.json({ success: true, pages: rows });
+  } catch (e) {
+    logger.error('Page settings fetch error:', e);
+    res.status(500).json({ success: false, message: 'Failed to fetch page settings' });
+  }
+});
+
+router.post('/page-settings', [ body('page_path').isLength({ min: 1 }), body('tokens_json').isString() ], (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { page_path, tokens_json } = req.body;
+    const result = db.prepare('INSERT OR REPLACE INTO page_settings (id, page_path, tokens_json, updated_at) VALUES ((SELECT id FROM page_settings WHERE page_path = ?), ?, ?, ?)')
+      .run(page_path, page_path, tokens_json, new Date().toISOString());
+    res.status(201).json({ success: true, id: result.lastInsertRowid });
+  } catch (e) {
+    logger.error('Page settings save error:', e);
+    res.status(500).json({ success: false, message: 'Failed to save page settings' });
+  }
+});
+
+router.delete('/page-settings/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = db.prepare('DELETE FROM page_settings WHERE id = ?').run(id);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Page settings not found' });
+    res.json({ success: true, message: 'Deleted' });
+  } catch (e) {
+    logger.error('Page settings delete error:', e);
+    res.status(500).json({ success: false, message: 'Failed to delete page settings' });
+  }
+});
+
+// FAQs CRUD
+router.get('/faqs', (req, res) => {
+  const rows = db.prepare('SELECT * FROM faqs ORDER BY updated_at DESC').all();
+  res.json({ success: true, faqs: rows });
+});
+router.post('/faqs', [ body('page_path').isString(), body('items').isArray({ min: 1 }) ], (req, res) => {
+  const { page_path, items } = req.body;
+  const r = db.prepare('INSERT INTO faqs (page_path, items_json) VALUES (?, ?)').run(page_path, JSON.stringify(items));
+  res.status(201).json({ success: true, id: r.lastInsertRowid });
+});
+router.put('/faqs/:id', [ body('items').isArray({ min: 1 }) ], (req, res) => {
+  const { id } = req.params; const { items } = req.body;
+  db.prepare('UPDATE faqs SET items_json = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(items), new Date().toISOString(), id);
+  res.json({ success: true });
+});
+router.delete('/faqs/:id', (req, res) => {
+  const { id } = req.params;
+  db.prepare('DELETE FROM faqs WHERE id = ?').run(id);
+  res.json({ success: true });
+});
+
+// Generate SEO posts for all active tools
+router.post('/seo/generate', async (req, res) => {
+  try {
+    const { perTool = 2, status = 'published' } = req.body || {};
+    const tools = await allSQL('SELECT name, slug, category, description FROM tools WHERE is_active = 1 ORDER BY category, name');
+    let created = 0;
+    for (const t of tools) {
+      const variants = [
+        {
+          title: `How to use ${t.name} (Fast + Free)` ,
+          excerpt: `${t.name} makes it easy to ${t.description || 'get the job done'} — here’s a quick guide and best practices.`,
+          content: buildHowToPost(t)
+        },
+        {
+          title: `${t.name}: Best Practices, Tips, and FAQs`,
+          excerpt: `Improve results with ${t.name}. Learn pro tips, common mistakes, and FAQs for better outcomes.`,
+          content: buildBestPracticesPost(t)
+        }
+      ];
+      for (let i = 0; i < Math.min(perTool, variants.length); i++) {
+        const v = variants[i];
+        const slug = (v.title.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'').slice(0,80)) + `-${Math.random().toString(36).slice(2,6)}`;
+        db.prepare(`INSERT INTO blog_posts (title, slug, content, excerpt, author_id, status, category, featured, views, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?)`)
+          .run(v.title, slug, v.content, v.excerpt, req.user.id, status, t.category || 'general', new Date().toISOString(), new Date().toISOString());
+        created++;
+      }
+    }
+    res.json({ success: true, created });
+  } catch (e) {
+    logger.error('SEO generate error', e);
+    res.status(500).json({ success: false, message: 'Failed to generate posts' });
+  }
+});
+
+function buildHowToPost(t) {
+  const h = `# ${t.name} — How To Guide\n\n`+
+    `Learn how to use ${t.name} to ${t.description || 'accomplish your task quickly'} in a few simple steps. This guide covers setup, workflow, and pro tips.\n\n`+
+    `## Why use ${t.name}?\n${t.name} helps streamline your workflow with an easy interface and fast processing. It’s free, browser-based, and optimized for speed.\n\n`+
+    `## Steps\n1. Open the ${t.name} page\n2. Provide your input (files or text)\n3. Choose the right settings\n4. Click the action button and wait for processing\n5. Review, download, and iterate\n\n`+
+    `## Pro Tips\n- Use descriptive file names and keep inputs clean\n- Start with defaults, then tweak settings for best output\n- Link related tools from the ${t.category || 'tools'} category to build a repeatable workflow\n\n`+
+    `## FAQs\n**Is ${t.name} free?** Yes, it’s free to use.\n\n**Do you store my files?** Files are processed and stored temporarily to deliver results.\n\n**Can I use it on mobile?** Yes, the tool is mobile-friendly.\n\n`+
+    `## Related Tools\nExplore more in ${t.category || 'our tools'} to chain tasks and save time.`;
+  return h;
+}
+
+function buildBestPracticesPost(t) {
+  const b = `# ${t.name}: Best Practices\n\n`+
+    `To get the best results with ${t.name}, follow these tips and avoid common pitfalls.\n\n`+
+    `## Tips\n- Keep inputs high-quality to improve output\n- Use consistent settings to standardize results\n- Leverage templates and brand kits\n\n`+
+    `## Common Mistakes\n- Uploading low-resolution assets\n- Ignoring aspect ratios and safe zones\n- Skipping a quick preview before exporting\n\n`+
+    `## FAQs\n**What browsers are supported?** Latest Chrome/Firefox/Edge.\n\n**How fast is processing?** Most tasks complete within seconds.\n\n**Can I watermark results?** Yes, with your brand kit settings.\n\n`+
+    `## Next Steps\nTry ${t.name} now and explore complementary tools in ${t.category || 'our tools'}.`;
+  return b;
+}
+
+// Brand kits
+router.get('/brand-kits', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM brand_kits WHERE user_id = ? ORDER BY updated_at DESC').all(req.user.id);
+    res.json({ success: true, brandKits: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch brand kits' });
+  }
+});
+
+router.post('/brand-kits', [ body('name').isLength({ min: 1 }) ], (req, res) => {
+  try {
+    const { name, colors = {}, fonts = {}, logo_url = '', watermark_url = '' } = req.body;
+    const r = db.prepare('INSERT INTO brand_kits (user_id, name, colors_json, fonts_json, logo_url, watermark_url) VALUES (?, ?, ?, ?, ?, ?)')
+      .run(req.user.id, name, JSON.stringify(colors), JSON.stringify(fonts), logo_url, watermark_url);
+    res.status(201).json({ success: true, id: r.lastInsertRowid });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to create brand kit' });
+  }
+});
+
+router.put('/brand-kits/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const updates = req.body || {};
+    const setClause = Object.keys(updates).map(k => `${k === 'colors' ? 'colors_json' : k === 'fonts' ? 'fonts_json' : k} = ?`).join(', ');
+    const params = Object.entries(updates).map(([k, v]) => (k === 'colors' || k === 'fonts') ? JSON.stringify(v) : v);
+    params.push(new Date().toISOString(), id, req.user.id);
+    const result = db.prepare(`UPDATE brand_kits SET ${setClause}, updated_at = ? WHERE id = ? AND user_id = ?`).run(...params);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Brand kit not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to update brand kit' });
+  }
+});
+
+// Page blocks
+router.get('/page-blocks', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM page_blocks ORDER BY page_path, position').all();
+    res.json({ success: true, blocks: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch blocks' });
+  }
+});
+
+router.post('/page-blocks', [ body('page_path').isLength({ min: 1 }), body('block_type').isLength({ min: 1 }), body('config').isObject(), body('position').optional().isInt() ], (req, res) => {
+  try {
+    const { page_path, block_type, config, position = 0 } = req.body;
+    const r = db.prepare('INSERT INTO page_blocks (page_path, position, block_type, config_json) VALUES (?, ?, ?, ?)').run(page_path, position, block_type, JSON.stringify(config));
+    res.status(201).json({ success: true, id: r.lastInsertRowid });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to create block' });
+  }
+});
+
+router.put('/page-blocks/:id', [ body('config').optional().isObject(), body('position').optional().isInt() ], (req, res) => {
+  try {
+    const { id } = req.params; const updates = req.body;
+    const setClause = Object.keys(updates).map(k => `${k === 'config' ? 'config_json' : k} = ?`).join(', ');
+    const params = Object.entries(updates).map(([k, v]) => (k === 'config') ? JSON.stringify(v) : v);
+    params.push(new Date().toISOString(), id);
+    const result = db.prepare(`UPDATE page_blocks SET ${setClause}, updated_at = ? WHERE id = ?`).run(...params);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Block not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to update block' });
+  }
+});
+
+router.delete('/page-blocks/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = db.prepare('DELETE FROM page_blocks WHERE id = ?').run(id);
+    if (result.changes === 0) return res.status(404).json({ success: false, message: 'Block not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to delete block' });
+  }
+});
+
+// Blog curation rules
+router.get('/blog-curation', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM blog_curation ORDER BY updated_at DESC').all();
+    res.json({ success: true, rules: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch curation rules' });
+  }
+});
+
+router.post('/blog-curation', [ body('context').isLength({ min: 1 }), body('rule').isObject() ], (req, res) => {
+  try {
+    const { context, rule } = req.body;
+    const r = db.prepare('INSERT INTO blog_curation (context, rule_json) VALUES (?, ?)').run(context, JSON.stringify(rule));
+    res.status(201).json({ success: true, id: r.lastInsertRowid });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to create curation rule' });
+  }
+});
+
+router.put('/blog-curation/:id', [ body('rule').isObject() ], (req, res) => {
+  try {
+    const { id } = req.params; const { rule } = req.body;
+    const r = db.prepare('UPDATE blog_curation SET rule_json = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(rule), new Date().toISOString(), id);
+    if (r.changes === 0) return res.status(404).json({ success: false, message: 'Rule not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to update curation rule' });
+  }
+});
+
+router.delete('/blog-curation/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const r = db.prepare('DELETE FROM blog_curation WHERE id = ?').run(id);
+    if (r.changes === 0) return res.status(404).json({ success: false, message: 'Rule not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to delete curation rule' });
   }
 });
 

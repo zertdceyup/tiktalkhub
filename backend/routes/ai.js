@@ -5,6 +5,8 @@ import db from '../database/init.js';
 import { optionalAuth } from '../middleware/auth.js';
 import aiService from '../services/aiService.js';
 import logger from '../utils/logger.js';
+import { allSQL } from '../database/init.js';
+import { embedTexts, cosineSim } from '../services/embeddings.js';
 
 const router = express.Router();
 
@@ -362,6 +364,32 @@ router.post('/generate-content', [
       message: 'Failed to generate content'
     });
   }
+});
+
+// RAG: upsert document
+router.post('/rag/upsert', [ body('doc_type').isString(), body('doc_id').isString(), body('content').isString() ], async (req, res) => {
+  try {
+    const { doc_type, doc_id, content } = req.body;
+    const vec = (await embedTexts([content]))[0];
+    const embedding = Buffer.from(Float32Array.from(vec).buffer);
+    db.prepare('INSERT INTO rag_index (doc_type, doc_id, content, embedding) VALUES (?, ?, ?, ?)').run(doc_type, doc_id, content, embedding);
+    res.json({ success: true });
+  } catch (e) { logger.error('RAG upsert error', e); res.status(500).json({ success: false }); }
+});
+
+// RAG: search
+router.post('/rag/search', [ body('query').isString(), body('limit').optional().isInt({ min: 1, max: 10 }) ], async (req, res) => {
+  try {
+    const { query, limit = 5 } = req.body;
+    const rows = await allSQL('SELECT id, doc_type, doc_id, content, embedding FROM rag_index ORDER BY created_at DESC LIMIT 500');
+    const qv = (await embedTexts([query]))[0];
+    const ranked = rows.map(r => {
+      const vec = new Float32Array(Buffer.from(r.embedding));
+      const score = cosineSim(qv, Array.from(vec));
+      return { r, score };
+    }).sort((a,b)=>b.score-a.score).slice(0, limit).map(x=>({ id: x.r.id, doc_type: x.r.doc_type, doc_id: x.r.doc_id, content: x.r.content, score: x.score }));
+    res.json({ success: true, data: { results: ranked } });
+  } catch (e) { logger.error('RAG search error', e); res.status(500).json({ success: false }); }
 });
 
 // Get conversation history

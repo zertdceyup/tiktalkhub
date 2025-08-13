@@ -2,6 +2,8 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import logger from '../../utils/logger.js';
 import { generateText, extractKeywords } from '../../services/aiService.js';
+import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
 
@@ -176,6 +178,95 @@ router.post('/facebook-caption-creator', [
       success: false,
       message: 'Failed to create Facebook caption'
     });
+  }
+});
+
+// Bio Link Builder
+router.post('/bio-link-builder', [
+  body('title').isLength({ min: 1, max: 80 }),
+  body('bio').optional().isLength({ max: 200 }),
+  body('theme').optional().isIn(['light','dark','neon']),
+  body('links').isArray({ min: 1 }),
+], async (req, res) => {
+  const started = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { title, bio = '', theme = 'light', links = [], socials = {} } = req.body;
+
+    const shareId = `bio_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+    const themeConfig = theme === 'neon' ? {
+      bg: '#0b0b1f', text: '#ffffff', accent: '#a78bfa', button: '#22d3ee'
+    } : theme === 'dark' ? {
+      bg: '#111827', text: '#f9fafb', accent: '#6366f1', button: '#10b981'
+    } : {
+      bg: '#ffffff', text: '#111827', accent: '#7c3aed', button: '#2563eb'
+    };
+
+    const payload = { shareId, title, bio, theme, themeConfig, links, socials, createdAt: new Date().toISOString() };
+
+    // Persist JSON (best-effort)
+    try {
+      const dir = path.join(process.cwd(), 'uploads', 'bio');
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(path.join(dir, `${shareId}.json`), JSON.stringify(payload, null, 2));
+    } catch (e) {
+      // ignore persistence failure in demo
+    }
+
+    const preview = {
+      url: `/uploads/bio/${shareId}.json`,
+      theme: themeConfig,
+      linkCount: links.length
+    };
+
+    const processingTime = Date.now() - started;
+
+    if (req.trackUsage) {
+      req.trackUsage('bio-link-builder', req.user?.id, req.ip, req.get('User-Agent'), { theme, linkCount: links.length }, { shareId }, processingTime);
+    }
+
+    res.json({ success: true, data: { shareId, preview, processingTime, note: 'Demo implementation; JSON config persisted for preview.' } });
+  } catch (error) {
+    logger.error('Bio link builder error:', error);
+    res.status(500).json({ success: false, message: 'Failed to build bio link' });
+  }
+});
+
+// Link Shortener
+router.post('/link-shortener', [
+  body('url').isURL({ require_protocol: true }),
+  body('customCode').optional().isLength({ min: 3, max: 20 }),
+  body('expireDays').optional().isInt({ min: 1, max: 365 })
+], async (req, res) => {
+  const started = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    }
+
+    const { url, customCode, expireDays = 90 } = req.body;
+    const code = (customCode || Math.random().toString(36).slice(2, 8)).toLowerCase();
+    const shortBase = process.env.SHORT_BASE_URL || 'https://tiktalkhub.link';
+    const shortUrl = `${shortBase}/s/${code}`;
+
+    const expiresAt = new Date(Date.now() + Number(expireDays) * 86400000).toISOString();
+
+    const processingTime = Date.now() - started;
+
+    if (req.trackUsage) {
+      req.trackUsage('link-shortener', req.user?.id, req.ip, req.get('User-Agent'), { expireDays }, { code }, processingTime);
+    }
+
+    res.json({ success: true, data: { shortCode: code, shortUrl, target: url, expiresAt, processingTime, note: 'Demo shortener; no redirect persistence in this demo.' } });
+  } catch (error) {
+    logger.error('Link shortener error:', error);
+    res.status(500).json({ success: false, message: 'Failed to shorten link' });
   }
 });
 

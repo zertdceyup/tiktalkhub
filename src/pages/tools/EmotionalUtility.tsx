@@ -9,6 +9,7 @@ import {
   Heart, Brain, Smile, Moon, 
   Activity, MessageCircle, ArrowRight, TrendingUp 
 } from 'lucide-react';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const EmotionalUtility = () => {
   const tools = [
@@ -53,32 +54,7 @@ const EmotionalUtility = () => {
     }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "Building Emotional Resilience",
-      excerpt: "Practical strategies to develop emotional strength and bounce back from life's challenges.",
-      readTime: "9 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=200&fit=crop"
-    },
-    {
-      id: 2,
-      title: "The Science of Gratitude",
-      excerpt: "How practicing gratitude can transform your mental health and overall well-being.",
-      readTime: "7 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=400&h=200&fit=crop"
-    },
-    {
-      id: 3,
-      title: "Mindfulness in Daily Life",
-      excerpt: "Simple techniques to incorporate mindfulness into your busy schedule for better mental health.",
-      readTime: "8 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=400&h=200&fit=crop"
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:emotional', fallbackLimit: 6 });
 
   return (
     <div className="min-h-screen">
@@ -169,20 +145,18 @@ const EmotionalUtility = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer overflow-hidden">
                 <div className="aspect-video overflow-hidden">
                   <img 
-                    src={post.image} 
+                    src={post.featured_image} 
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                 </div>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending

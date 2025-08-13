@@ -37,12 +37,11 @@ const TextToSpeech: React.FC = () => {
 
   return (
     <div className="min-h-screen">
-      <SEO title="Text-to-Speech | Tiktalkhub" description="Convert text to speech with voice, speed, and language controls."
-        keywords={["text to speech","tts","audio"]}
+      <SEO
+        title="Text-to-Speech (TTS) | Content Tools | Tiktalkhub"
+        description="Convert text to natural-sounding speech with voice, speed, and language controls."
+        keywords={["text to speech","tts","voice generator","audio from text"]}
         canonical="/tools/content/text-to-speech"
-        openGraph={{ title: 'Text-to-Speech | Tiktalkhub', description: 'Convert text to speech', type: 'website', url: window.location.href }}
-        twitter={{ card: 'summary_large_image', title: 'Text-to-Speech | Tiktalkhub', description: 'Convert text to speech' }}
-        jsonLd={jsonLd}
       />
       <Header />
       <section className="py-16">

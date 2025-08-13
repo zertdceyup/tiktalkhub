@@ -2,8 +2,22 @@ import express from 'express';
 import { body, validationResult } from 'express-validator';
 import logger from '../../utils/logger.js';
 import { generateText, analyzeSentiment, extractKeywords, analyzeReadability } from '../../services/aiService.js';
+import multer from 'multer';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 const router = express.Router();
+
+const audioStorage = multer.memoryStorage();
+const uploadAudio = multer({
+  storage: audioStorage,
+  limits: { fileSize: 25 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const ok = ['audio/mpeg','audio/mp3','audio/wav','audio/x-wav','audio/webm','audio/ogg','audio/m4a'].includes(file.mimetype);
+    if (ok) cb(null, true); else cb(new Error('Invalid audio type'));
+  }
+});
 
 // Blog Idea Generator
 router.post('/blog-idea-generator', [
@@ -364,6 +378,264 @@ router.post('/text-to-speech', [
       success: false,
       message: 'Failed to convert text to speech'
     });
+  }
+});
+
+// Text Summarizer
+router.post('/text-summarizer', [
+  body('text').isLength({ min: 50 }),
+  body('length').optional().isIn(['short','medium','long'])
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { text, length = 'medium' } = req.body;
+
+    let summary = '';
+    if (process.env.ENABLE_LOCAL_AI === 'true') {
+      try {
+        const prompt = `Summarize the following text in a ${length} length with bullet key points.\n\n${text}`;
+        summary = (await generateText(prompt)) || '';
+      } catch (e) {}
+    }
+    if (!summary) {
+      const sentences = text.split(/(?<=[.!?])\s+/).slice(0, length === 'short' ? 2 : length === 'medium' ? 4 : 6);
+      summary = sentences.join(' ');
+    }
+
+    const keywords = extractKeywords(text, 10);
+
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('text-summarizer', req.user?.id, req.ip, req.get('User-Agent'), { length, textLength: text.length }, { keywordCount: keywords.length }, processingTime);
+    res.json({ success: true, data: { summary, keywords, processingTime } });
+  } catch (error) {
+    logger.error('Text summarizer error:', error);
+    res.status(500).json({ success: false, message: 'Failed to summarize text' });
+  }
+});
+
+// Voice Notes to Text (mock STT)
+router.post('/voice-notes-to-text', uploadAudio.single('audio'), [
+  body('language').optional().isIn(['en','es','fr','de','it'])
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No audio file provided' });
+    const { language = 'en' } = req.body;
+
+    // Mock transcript
+    const transcript = `This is a mock transcription of your voice note (${req.file.originalname}).`;
+    const wordCount = Math.floor(req.file.size / 2000) + 20;
+    const confidence = 0.9;
+
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('voice-notes-to-text', req.user?.id, req.ip, req.get('User-Agent'), { language, size: req.file.size }, { wordCount }, processingTime);
+    res.json({ success: true, data: { transcript, language, confidence, wordCount, processingTime, note: 'Demo transcription. Integrate local ASR for production.' } });
+  } catch (error) {
+    logger.error('Voice notes to text error:', error);
+    res.status(500).json({ success: false, message: 'Failed to transcribe audio' });
+  }
+});
+
+// Whisper.cpp transcription (real) if enabled
+router.post('/whisper-transcribe', uploadAudio.single('audio'), [ body('language').optional().isString() ], async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No audio file provided' });
+    const bin = process.env.WHISPER_BIN;
+    const model = process.env.WHISPER_MODEL || 'ggml-base.en.bin';
+    if (!bin || !fs.existsSync(bin)) return res.status(400).json({ success: false, message: 'Whisper binary not configured' });
+    const tmpDir = path.join(process.cwd(), 'uploads', 'audio');
+    fs.mkdirSync(tmpDir, { recursive: true });
+    const audioPath = path.join(tmpDir, `${Date.now()}_${req.file.originalname.replace(/[^a-zA-Z0-9._-]/g,'_')}`);
+    fs.writeFileSync(audioPath, req.file.buffer);
+    const args = ['-m', model, '-f', audioPath, '-of', 'json'];
+    const proc = spawn(bin, args);
+    let out = '', err = '';
+    proc.stdout.on('data', d => out += d.toString());
+    proc.stderr.on('data', d => err += d.toString());
+    proc.on('close', code => {
+      if (code !== 0) return res.status(500).json({ success: false, message: 'Whisper failed', error: err });
+      try {
+        const parsed = JSON.parse(out);
+        const text = parsed.text || '';
+        res.json({ success: true, data: { transcript: text, raw: parsed } });
+      } catch (e) {
+        res.status(500).json({ success: false, message: 'Failed to parse whisper output' });
+      }
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Transcription failed' });
+  }
+});
+
+// Coqui/Tortoise TTS integration (real) if enabled
+router.post('/tts', [
+  body('text').isLength({ min: 1 }),
+  body('voice').optional().isString(),
+  body('speed').optional().isFloat({ min: 0.5, max: 2.0 }),
+  body('language').optional().isString()
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { text, voice = process.env.TTS_VOICE || 'en_US', speed = 1.0, language = 'en' } = req.body;
+    const bin = process.env.TTS_BIN;
+    if (!bin || !fs.existsSync(bin)) return res.status(400).json({ success: false, message: 'TTS binary not configured' });
+    const outDir = path.join(process.cwd(), 'uploads', 'audio');
+    fs.mkdirSync(outDir, { recursive: true });
+    const outPath = path.join(outDir, `tts_${Date.now()}.wav`);
+    // Example CLI args; adjust per your TTS engine
+    // Expecting: tts --text "..." --out_path out.wav --voice VOICE --lang en --speed 1.0
+    const args = [ '--text', text, '--out_path', outPath, '--voice', voice, '--lang', language, '--speed', String(speed) ];
+    const proc = spawn(bin, args, { env: process.env });
+    let err = '';
+    proc.stderr.on('data', d => err += d.toString());
+    proc.on('close', code => {
+      if (code !== 0) return res.status(500).json({ success: false, message: 'TTS generation failed', error: err });
+      const processingTime = Date.now() - start;
+      res.json({ success: true, data: { audioUrl: `/uploads/audio/${path.basename(outPath)}`, settings: { voice, speed, language }, processingTime } });
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'TTS failed' });
+  }
+});
+
+// Readability Checker
+router.post('/readability-checker', [
+  body('text').isLength({ min: 20 })
+], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { text } = req.body;
+    const readability = await analyzeReadability(text);
+    const sentiment = analyzeSentiment(text);
+    const keywords = extractKeywords(text, 10);
+    const processingTime = Date.now() - startTime;
+    if (req.trackUsage) req.trackUsage('readability-checker', req.user?.id, req.ip, req.get('User-Agent'), { textLength: text.length }, { score: readability.score }, processingTime);
+    res.json({ success: true, data: { readability, sentiment, keywords, processingTime } });
+  } catch (error) {
+    logger.error('Readability checker error:', error);
+    res.status(500).json({ success: false, message: 'Failed to analyze text' });
+  }
+});
+
+// Content Repurposer
+router.post('/content-repurposer', [
+  body('text').isLength({ min: 50 }),
+  body('target').isIn(['tweet-thread','linkedin-post','tiktok-script','instagram-caption','blog-outline'])
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { text, target } = req.body;
+
+    let output = '';
+    if (process.env.ENABLE_LOCAL_AI === 'true') {
+      try {
+        const prompt = `Repurpose the following content into a ${target}. Keep it concise and structured with bullet points or numbered steps when helpful.\n\n${text}`;
+        output = await generateText(prompt, { category: 'general' }) || '';
+      } catch (e) {}
+    }
+    if (!output) {
+      // Template fallback
+      const sentences = text.split(/(?<=[.!?])\s+/).slice(0, 6);
+      if (target === 'tweet-thread') output = sentences.map((s, i) => `${i+1}/ ${s}`).join('\n');
+      else if (target === 'linkedin-post') output = `• ${sentences.join('\n• ')}\n\n#growth #productivity`;
+      else if (target === 'tiktok-script') output = `Hook: ${sentences[0]}\n\nSteps:\n${sentences.slice(1).map((s,i)=>`${i+1}. ${s}`).join('\n')}\n\nCTA: Follow for more!`;
+      else if (target === 'instagram-caption') output = `${sentences.slice(0,3).join(' ')}\n\n✨ Tips in bio #creator #ai`;
+      else output = `Outline:\n${sentences.map((s,i)=>`- Section ${i+1}: ${s}`).join('\n')}`;
+    }
+
+    const processingTime = Date.now() - start;
+    if (req.trackUsage) req.trackUsage('content-repurposer', req.user?.id, req.ip, req.get('User-Agent'), { target, textLength: text.length }, { outputLength: output.length }, processingTime);
+    res.json({ success: true, data: { target, output, processingTime } });
+  } catch (e) {
+    logger.error('Content repurposer error:', e);
+    res.status(500).json({ success: false, message: 'Failed to repurpose content' });
+  }
+});
+
+// Idea to Script Generator
+router.post('/idea-to-script', [
+  body('idea').isLength({ min: 10, max: 500 }),
+  body('platform').optional().isIn(['tiktok','youtube','reels','shorts','podcast'])
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { idea, platform = 'tiktok' } = req.body;
+
+    let script = '';
+    if (process.env.ENABLE_LOCAL_AI === 'true') {
+      try {
+        const prompt = `Turn this idea into a ${platform} script with Hook, Body (3-5 beats), and CTA. Keep it punchy.\nIdea: ${idea}`;
+        script = await generateText(prompt) || '';
+      } catch {}
+    }
+    if (!script) {
+      script = `Hook: ${idea}\n\nBeats:\n1) Problem\n2) Twist\n3) Solution\n4) Proof\n5) CTA\n\nCTA: Follow for more!`;
+    }
+
+    const processingTime = Date.now() - start;
+    if (req.trackUsage) req.trackUsage('idea-to-script', req.user?.id, req.ip, req.get('User-Agent'), { platform }, { length: script.length }, processingTime);
+    res.json({ success: true, data: { platform, script, processingTime } });
+  } catch (e) {
+    logger.error('Idea to script error:', e);
+    res.status(500).json({ success: false, message: 'Failed to generate script' });
+  }
+});
+
+// Social Hook Analyzer
+router.post('/social-hook-analyzer', [
+  body('hook').isLength({ min: 5, max: 280 })
+], async (req, res) => {
+  const start = Date.now();
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ success: false, message: 'Validation errors', errors: errors.array() });
+    const { hook } = req.body;
+    const sentiment = analyzeSentiment(hook);
+    const readability = await analyzeReadability(hook);
+    const patterns = {
+      question: /\?$/,
+      number: /\b\d+\b/,
+      shocking: /(secret|nobody|truth|shocking|exposed)/i,
+      tutorial: /(how to|step-by-step|guide)/i
+    };
+    const styles = Object.keys(patterns).filter(k => patterns[k].test(hook));
+    const score = Math.min(100, Math.max(20, 60 + (styles.length * 10) + (sentiment.score > 0 ? 10 : 0) - (readability.level.includes('Difficult') ? 10 : 0)));
+    const processingTime = Date.now() - start;
+    if (req.trackUsage) req.trackUsage('social-hook-analyzer', req.user?.id, req.ip, req.get('User-Agent'), { length: hook.length }, { score }, processingTime);
+    res.json({ success: true, data: { hook, styles, sentiment, readability, score, processingTime } });
+  } catch (e) {
+    logger.error('Social hook analyzer error:', e);
+    res.status(500).json({ success: false, message: 'Failed to analyze hook' });
+  }
+});
+
+// Hook Lab iterations: propose alternatives and score
+router.post('/hook-lab', [ body('hook').isLength({ min: 5 }), body('iterations').optional().isInt({ min: 1, max: 10 }) ], async (req, res) => {
+  const start = Date.now();
+  try {
+    const { hook, iterations = 5 } = req.body;
+    const variants = [];
+    for (let i = 0; i < iterations; i++) {
+      const alt = i % 2 === 0 ? `${hook.replace(/\.$/, '')}?` : hook.toUpperCase().slice(0, 120);
+      const sentiment = analyzeSentiment(alt);
+      const readability = await analyzeReadability(alt);
+      const score = Math.min(100, Math.max(20, 60 + (sentiment.score > 0 ? 10 : 0) - (readability.level.includes('Difficult') ? 10 : 0)));
+      variants.push({ text: alt, score, sentiment, readability });
+    }
+    const processingTime = Date.now() - start;
+    res.json({ success: true, data: { base: hook, variants, processingTime } });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Hook Lab failed' });
   }
 });
 

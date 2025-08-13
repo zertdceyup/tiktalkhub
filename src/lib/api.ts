@@ -256,6 +256,25 @@ class ApiClient {
     });
   }
 
+  async generateBusinessPlan(data: {
+    businessName: string;
+    industry: string;
+    targetMarket: string;
+    tone?: 'professional' | 'friendly' | 'concise' | 'visionary';
+    length?: 'short' | 'medium' | 'long';
+    problem?: string;
+    solution?: string;
+    revenueStreams?: string[];
+    channels?: string[];
+    costStructure?: string[];
+    generatePDF?: boolean;
+  }): Promise<ApiResponse<{ plan: any; pdfUrl?: string; processingTime: number }>> {
+    return this.request('/tools/smartbiz/business-plan-generator', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
   // Career tools
   async buildResume(data: {
     personalInfo: any;
@@ -309,6 +328,10 @@ class ApiClient {
     });
   }
 
+  async jobMatchOptimizer(data: { jobDescription: string; resume: string }): Promise<ApiResponse<{ atsScore: number; jobKeywords: string[]; resumeKeywords: string[]; overlap: string[]; missing: string[]; suggestions: string[]; optimizedSummary: string; processingTime: number }>> {
+    return this.request('/tools/career/job-match-optimizer', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // Content tools
   async generateBlogIdeas(data: {
     niche: string;
@@ -359,6 +382,17 @@ class ApiClient {
     });
   }
 
+  async whisperTranscribe(data: { file: File; language?: string }): Promise<ApiResponse<{ transcript: string; raw: any }>> {
+    const formData = new FormData();
+    formData.append('audio', data.file);
+    if (data.language) formData.append('language', data.language);
+    return this.request('/tools/content/whisper-transcribe', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async tts(data: { text: string; voice?: string; speed?: number; language?: string }): Promise<ApiResponse<{ audioUrl: string; settings: any; processingTime: number }>> {
+    return this.request('/tools/content/tts', { method: 'POST', body: JSON.stringify(data) });
+  }
+
   // Video tools
   async trimVideo(data: {
     file: File;
@@ -366,7 +400,7 @@ class ApiClient {
     endTime: number;
   }): Promise<ApiResponse<{ videoUrl: string; processingTime: number }>> {
     const formData = new FormData();
-    formData.append('file', data.file);
+    formData.append('video', data.file);
     formData.append('startTime', data.startTime.toString());
     formData.append('endTime', data.endTime.toString());
 
@@ -383,7 +417,7 @@ class ApiClient {
     count?: number;
   }): Promise<ApiResponse<{ thumbnails: string[]; processingTime: number }>> {
     const formData = new FormData();
-    formData.append('file', data.file);
+    formData.append('video', data.file);
     if (data.timestamp) formData.append('timestamp', data.timestamp.toString());
     if (data.count) formData.append('count', data.count.toString());
 
@@ -394,6 +428,114 @@ class ApiClient {
     });
   }
 
+  async createGif(data: {
+    file: File;
+    startTime?: number;
+    duration?: number;
+    quality?: 'low' | 'medium' | 'high';
+    fps?: number;
+  }): Promise<ApiResponse<{ gif: any; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.startTime !== undefined) formData.append('startTime', String(data.startTime));
+    if (data.duration !== undefined) formData.append('duration', String(data.duration));
+    if (data.quality) formData.append('quality', data.quality);
+    if (data.fps !== undefined) formData.append('fps', String(data.fps));
+
+    return this.request('/tools/video/gif-maker', {
+      method: 'POST',
+      body: formData,
+      headers: {},
+    });
+  }
+
+  async videoProSilenceStrip(data: { file: File; threshold?: string; duration?: number }): Promise<ApiResponse<{ url: string; processingTime: number }>> {
+    const formData = new FormData(); formData.append('video', data.file);
+    if (data.threshold) formData.append('threshold', data.threshold);
+    if (data.duration !== undefined) formData.append('duration', String(data.duration));
+    return this.request('/tools/video/pro/silence-strip', { method: 'POST', body: formData, headers: {} });
+  }
+  async videoProLoudnorm(data: { file: File; i?: number; tp?: number; lra?: number }): Promise<ApiResponse<{ url: string; processingTime: number }>> {
+    const formData = new FormData(); formData.append('video', data.file);
+    if (data.i !== undefined) formData.append('i', String(data.i));
+    if (data.tp !== undefined) formData.append('tp', String(data.tp));
+    if (data.lra !== undefined) formData.append('lra', String(data.lra));
+    return this.request('/tools/video/pro/loudness-normalize', { method: 'POST', body: formData, headers: {} });
+  }
+  async videoProColorFix(data: { file: File; saturation?: number; contrast?: number; brightness?: number }): Promise<ApiResponse<{ url: string; processingTime: number }>> {
+    const formData = new FormData(); formData.append('video', data.file);
+    if (data.saturation !== undefined) formData.append('saturation', String(data.saturation));
+    if (data.contrast !== undefined) formData.append('contrast', String(data.contrast));
+    if (data.brightness !== undefined) formData.append('brightness', String(data.brightness));
+    return this.request('/tools/video/pro/color-fix', { method: 'POST', body: formData, headers: {} });
+  }
+  async videoProSmartAutoCrop(data: { file: File; duration?: number }): Promise<ApiResponse<{ url: string; processingTime: number }>> {
+    const formData = new FormData(); formData.append('video', data.file);
+    if (data.duration !== undefined) formData.append('duration', String(data.duration));
+    return this.request('/tools/video/pro/smart-auto-crop', { method: 'POST', body: formData, headers: {} });
+  }
+  async videoProBatch(operation: 'silence-strip'|'loudnorm'|'color-fix', files: File[]): Promise<ApiResponse<{ jobId: number; count: number }>> {
+    const formData = new FormData(); files.forEach((f) => formData.append('videos', f)); formData.append('operation', operation);
+    return this.request('/tools/video/pro/batch', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async getJob(id: number): Promise<ApiResponse<{ job: any }>> {
+    return this.request(`/tools/jobs/${id}`);
+  }
+
+  async captionOverlay(data: {
+    file: File;
+    captions: { start: number; end: number; text: string }[];
+    font?: string;
+    size?: number;
+    color?: string;
+    background?: string;
+    position?: 'top' | 'bottom' | 'middle';
+  }): Promise<ApiResponse<{ output: { url: string; style: any; srt: string; captionCount: number }; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    formData.append('captions', JSON.stringify(data.captions));
+    if (data.font) formData.append('font', data.font);
+    if (data.size) formData.append('size', String(data.size));
+    if (data.color) formData.append('color', data.color);
+    if (data.background) formData.append('background', data.background);
+    if (data.position) formData.append('position', data.position);
+    return this.request('/tools/video/caption-overlay', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async shortsVerticalCropper(data: {
+    file: File;
+    aspect?: '9:16' | '1:1' | '4:5';
+    strategy?: 'center' | 'smart-face' | 'smart-motion' | 'manual';
+    gravity?: 'center' | 'top' | 'bottom' | 'left' | 'right';
+    background?: 'blur' | 'black' | 'white';
+    resolution?: '720x1280' | '1080x1920' | '1440x2560';
+    startTime?: number;
+    endTime?: number;
+    safeZones?: { top?: number; bottom?: number; left?: number; right?: number };
+  }): Promise<ApiResponse<{ output: { url: string; aspect: string; strategy: string; gravity: string; background: string; resolution: string; duration: number; safeZones: any; cropTimeline: any[] }; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.aspect) formData.append('aspect', data.aspect);
+    if (data.strategy) formData.append('strategy', data.strategy);
+    if (data.gravity) formData.append('gravity', data.gravity);
+    if (data.background) formData.append('background', data.background);
+    if (data.resolution) formData.append('resolution', data.resolution);
+    if (data.startTime !== undefined) formData.append('startTime', String(data.startTime));
+    if (data.endTime !== undefined) formData.append('endTime', String(data.endTime));
+    if (data.safeZones) formData.append('safeZones', JSON.stringify(data.safeZones));
+    return this.request('/tools/video/shorts-vertical-cropper', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async removeNoise(data: { file: File; mode?: 'mild'|'moderate'|'aggressive'; humHz?: number; dereverb?: boolean }): Promise<ApiResponse<{ output: { url: string; settings: any; stats: any }; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.mode) formData.append('mode', data.mode);
+    if (data.humHz !== undefined) formData.append('humHz', String(data.humHz));
+    if (data.dereverb !== undefined) formData.append('dereverb', String(data.dereverb));
+    return this.request('/tools/video/noise-remover', { method: 'POST', body: formData, headers: {} });
+  }
+  
   // Social tools
   async generateHashtags(data: {
     content: string;
@@ -410,13 +552,71 @@ class ApiClient {
 
   async formatTwitterThread(data: {
     content: string;
-    maxTweets?: number;
-    addNumbers?: boolean;
-  }): Promise<ApiResponse<{ tweets: string[]; processingTime: number }>> {
+    maxTweetLength?: number;
+  }): Promise<ApiResponse<{ thread: string[]; totalTweets: number; originalLength: number; processingTime: number }>> {
     return this.request('/tools/social/twitter-thread-formatter', {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  async generateFacebookCaption(data: {
+    topic: string;
+    tone?: 'professional' | 'casual' | 'engaging' | 'promotional';
+    includeEmojis?: boolean;
+    callToAction?: string;
+  }): Promise<ApiResponse<{ caption: string; processingTime: number }>> {
+    return this.request('/tools/social/facebook-caption-creator', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async buildBioLink(data: { title: string; bio?: string; theme?: 'light'|'dark'|'neon'; links: { label: string; url: string }[]; socials?: Record<string,string> }): Promise<ApiResponse<{ shareId: string; preview: any; processingTime: number }>> {
+    return this.request('/tools/social/bio-link-builder', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async shortenLink(data: { url: string; customCode?: string; expireDays?: number }): Promise<ApiResponse<{ shortCode: string; shortUrl: string; target: string; expiresAt: string; processingTime: number }>> {
+    return this.request('/tools/social/link-shortener', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  // TikTok tools
+  async tiktokHashtagHeatmap(data: {
+    hashtags: string[];
+    timeframe?: '24h' | '7d' | '30d';
+  }): Promise<ApiResponse<{ timeframe: string; heatmapData: any[]; processingTime: number }>> {
+    return this.request('/tools/tiktok/hashtag-heatmap', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async tiktokViralHookGenerator(data: {
+    topic: string;
+    style?: 'question' | 'shocking' | 'storytelling' | 'tutorial' | 'trend';
+    count?: number;
+  }): Promise<ApiResponse<{ topic: string; style: string; hooks: any[]; processingTime: number }>> {
+    return this.request('/tools/tiktok/viral-hook-generator', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async tiktokTrendingAudio(data: { query?: string; timeframe?: '24h'|'7d'|'30d'; limit?: number }): Promise<ApiResponse<{ query: string; timeframe: string; results: any[]; processingTime: number }>> {
+    return this.request('/tools/tiktok/trending-audio', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  // Emotional tools
+  async mindMirror(data: { journalEntry: string; mood?: 'happy' | 'sad' | 'anxious' | 'excited' | 'angry' | 'calm' | 'stressed' | 'neutral' }): Promise<ApiResponse<{ originalEntry: string; sentiment: any; mood?: string; reflection: string; suggestions: string[]; processingTime: number }>> {
+    return this.request('/tools/emotional/mindmirror', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async therapet(data: { currentMood: 'happy' | 'sad' | 'anxious' | 'excited' | 'angry' | 'calm' | 'stressed' | 'neutral'; petType?: 'cat' | 'dog' | 'bird' | 'fish' | 'hamster'; interaction?: 'feed' | 'play' | 'pet' | 'talk' | 'exercise' }): Promise<ApiResponse<{ pet: any; interaction: string; response: string; moodBoost: number; processingTime: number }>> {
+    return this.request('/tools/emotional/therapet', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async moodboardAI(data: { colors: string[]; images?: string[]; description?: string }): Promise<ApiResponse<{ moodAnalysis: any; recommendations: any; processingTime: number }>> {
+    return this.request('/tools/emotional/moodboard-ai', { method: 'POST', body: JSON.stringify(data) });
   }
 
   // Utility tools
@@ -425,7 +625,7 @@ class ApiClient {
     quality?: string;
   }): Promise<ApiResponse<{ compressedUrl: string; originalSize: number; compressedSize: number; processingTime: number }>> {
     const formData = new FormData();
-    formData.append('file', data.file);
+    formData.append('pdf', data.file);
     if (data.quality) formData.append('quality', data.quality);
 
     return this.request('/tools/utility/pdf-compressor', {
@@ -435,12 +635,24 @@ class ApiClient {
     });
   }
 
+  async mergePDFs(data: { files: File[] }): Promise<ApiResponse<{ mergedPdf: string; fileCount: number; totalPages: number; mergedSize: number; processingTime: number }>> {
+    const formData = new FormData();
+    data.files.forEach((f) => formData.append('pdfs', f));
+    return this.request('/tools/utility/pdf-merger', {
+      method: 'POST',
+      body: formData,
+      headers: {},
+    });
+  }
+
   async generateQRCode(data: {
     text: string;
     size?: number;
-    format?: string;
-    errorCorrection?: string;
-  }): Promise<ApiResponse<{ qrCodeUrl: string; processingTime: number }>> {
+    format?: 'png' | 'svg';
+    errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H';
+    color?: string;
+    backgroundColor?: string;
+  }): Promise<ApiResponse<{ qrCode: string; format: string; size: number; processingTime: number }>> {
     return this.request('/tools/utility/qr-generator', {
       method: 'POST',
       body: JSON.stringify(data),
@@ -454,16 +666,82 @@ class ApiClient {
     resize?: { width?: number; height?: number };
   }): Promise<ApiResponse<{ optimizedUrl: string; originalSize: number; optimizedSize: number; processingTime: number }>> {
     const formData = new FormData();
-    formData.append('file', data.file);
-    if (data.quality) formData.append('quality', data.quality.toString());
+    formData.append('image', data.file);
+    if (data.quality !== undefined) formData.append('quality', String(data.quality));
     if (data.format) formData.append('format', data.format);
-    if (data.resize) formData.append('resize', JSON.stringify(data.resize));
+    if (data.resize?.width) formData.append('width', String(data.resize.width));
+    if (data.resize?.height) formData.append('height', String(data.resize.height));
 
     return this.request('/tools/utility/image-optimizer', {
       method: 'POST',
       body: formData,
       headers: {},
     });
+  }
+
+  async youtubeThumbnail(data: { url?: string; videoId?: string }): Promise<ApiResponse<{ videoId: string; thumbnails: { label: string; url: string; width: number; height: number }[]; processingTime: number }>> {
+    return this.request('/tools/utility/youtube-thumbnail', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async splitPDF(data: { file: File; ranges?: string; mode?: 'ranges' | 'every'; everyN?: number }): Promise<ApiResponse<{ pageCount: number; parts: { label: string; pdf: string }[]; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('pdf', data.file);
+    if (data.ranges) formData.append('ranges', data.ranges);
+    if (data.mode) formData.append('mode', data.mode);
+    if (data.everyN) formData.append('everyN', String(data.everyN));
+    return this.request('/tools/utility/pdf-splitter', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async protectPDF(data: { file: File; password?: string }): Promise<ApiResponse<{ protectedPdf: string; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('pdf', data.file);
+    if (data.password) formData.append('password', data.password);
+    return this.request('/tools/utility/pdf-password-protector', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async pdfToImage(data: { file: File; format?: 'png'|'jpg'; width?: number; height?: number }): Promise<ApiResponse<{ pageCount: number; images: { page: number; url: string }[]; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('pdf', data.file);
+    if (data.format) formData.append('format', data.format);
+    if (data.width) formData.append('width', String(data.width));
+    if (data.height) formData.append('height', String(data.height));
+    return this.request('/tools/utility/pdf-to-image', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async optimizeThumbnails(data: { file: File; count?: number; title?: string; style?: 'clean'|'bold'|'minimal'|'vibrant'; colorScheme?: string; addBorder?: boolean; badgeText?: string }): Promise<ApiResponse<{ video: any; candidates: any[]; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.count !== undefined) formData.append('count', String(data.count));
+    if (data.title) formData.append('title', data.title);
+    if (data.style) formData.append('style', data.style);
+    if (data.colorScheme) formData.append('colorScheme', data.colorScheme);
+    if (data.addBorder !== undefined) formData.append('addBorder', String(data.addBorder));
+    if (data.badgeText) formData.append('badgeText', data.badgeText);
+    return this.request('/tools/video/thumbnail-optimizer', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async remixImage(data: { file: File; effect?: 'grayscale'|'sepia'|'blur'|'pixelate'|'invert'|'none'; intensity?: number; hue?: number; saturation?: number }): Promise<ApiResponse<{ remixed: string; processingTime: number; meta: any }>> {
+    const formData = new FormData();
+    formData.append('image', data.file);
+    if (data.effect) formData.append('effect', data.effect);
+    if (data.intensity !== undefined) formData.append('intensity', String(data.intensity));
+    if (data.hue !== undefined) formData.append('hue', String(data.hue));
+    if (data.saturation !== undefined) formData.append('saturation', String(data.saturation));
+    return this.request('/tools/utility/image-remixer', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async summarizeText(data: { text: string; length?: 'short'|'medium'|'long' }): Promise<ApiResponse<{ summary: string; keywords: string[]; processingTime: number }>> {
+    return this.request('/tools/content/text-summarizer', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async voiceNotesToText(data: { file: File; language?: 'en'|'es'|'fr'|'de'|'it' }): Promise<ApiResponse<{ transcript: string; language: string; confidence: number; wordCount: number; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('audio', data.file);
+    if (data.language) formData.append('language', data.language);
+    return this.request('/tools/content/voice-notes-to-text', { method: 'POST', body: formData, headers: {} });
   }
 
   // AI endpoints
@@ -560,6 +838,14 @@ class ApiClient {
     return this.request(`/blog/${slug}`);
   }
 
+  // RAG
+  async ragUpsert(doc: { doc_type: string; doc_id: string; content: string }): Promise<ApiResponse<any>> { return this.request('/ai/rag/upsert', { method: 'POST', body: JSON.stringify(doc) }); }
+  async ragSearch(query: string, limit?: number): Promise<ApiResponse<{ results: any[] }>> { return this.request('/ai/rag/search', { method: 'POST', body: JSON.stringify({ query, limit }) }); }
+
+  // Projects autosave
+  async createProject(name: string, data: any): Promise<ApiResponse<{ id: number }>> { return this.request('/tools/projects', { method: 'POST', body: JSON.stringify({ name, data }) }); }
+  async updateProject(id: number, data: any): Promise<ApiResponse<any>> { return this.request(`/tools/projects/${id}`, { method: 'PUT', body: JSON.stringify({ data }) }); }
+
   async generateBlogContent(data: {
     topic: string;
     keywords?: string[];
@@ -603,6 +889,44 @@ class ApiClient {
     return this.request(`/files/${filename}`, {
       method: 'DELETE',
     });
+  }
+
+  async batchTrimVideos(data: { files: File[]; startTime: number; endTime: number; outputFormat?: 'mp4'|'webm'|'mov' }): Promise<ApiResponse<{ items: any[]; processingTime: number }>> {
+    const formData = new FormData();
+    data.files.forEach((f) => formData.append('videos', f));
+    formData.append('startTime', String(data.startTime));
+    formData.append('endTime', String(data.endTime));
+    if (data.outputFormat) formData.append('outputFormat', data.outputFormat);
+    return this.request('/tools/video/batch-trimmer', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async generateSmartCaptions(data: { file: File; language?: 'en'|'es'|'fr'|'de'|'it'; maxLineLength?: number; includePunctuation?: boolean }): Promise<ApiResponse<{ language: string; captions: { start: number; end: number; text: string }[]; srt: string; processingTime: number }>> {
+    const formData = new FormData();
+    formData.append('video', data.file);
+    if (data.language) formData.append('language', data.language);
+    if (data.maxLineLength !== undefined) formData.append('maxLineLength', String(data.maxLineLength));
+    if (data.includePunctuation !== undefined) formData.append('includePunctuation', String(data.includePunctuation));
+    return this.request('/tools/video/smart-caption-generator', { method: 'POST', body: formData, headers: {} });
+  }
+
+  async analyzeReadabilityText(data: { text: string }): Promise<ApiResponse<{ readability: any; sentiment: any; keywords: string[]; processingTime: number }>> {
+    return this.request('/tools/content/readability-checker', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async repurposeContent(data: { text: string; target: 'tweet-thread'|'linkedin-post'|'tiktok-script'|'instagram-caption'|'blog-outline' }): Promise<ApiResponse<{ target: string; output: string; processingTime: number }>> {
+    return this.request('/tools/content/content-repurposer', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async ideaToScript(data: { idea: string; platform?: 'tiktok'|'youtube'|'reels'|'shorts'|'podcast' }): Promise<ApiResponse<{ platform: string; script: string; processingTime: number }>> {
+    return this.request('/tools/content/idea-to-script', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async analyzeSocialHook(data: { hook: string }): Promise<ApiResponse<{ hook: string; styles: string[]; sentiment: any; readability: any; score: number; processingTime: number }>> {
+    return this.request('/tools/content/social-hook-analyzer', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  async hookLab(data: { seed?: string; style?: string; count?: number }): Promise<ApiResponse<{ variants: { text: string; score: number; reasons?: string[] }[]; processingTime: number }>> {
+    return this.request('/tools/content/hook-lab', { method: 'POST', body: JSON.stringify(data) });
   }
 }
 
