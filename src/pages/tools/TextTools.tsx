@@ -9,6 +9,7 @@ import {
   Type, CheckCircle, Globe, FileText, 
   Search, Languages, ArrowRight, TrendingUp 
 } from 'lucide-react';
+import { useCuratedPosts } from '@/hooks/useCuratedPosts';
 
 const TextTools = () => {
   const tools = [
@@ -53,56 +54,7 @@ const TextTools = () => {
     }
   ];
 
-  const blogPosts = [
-    {
-      id: 1,
-      title: "Writing in the AI Era",
-      excerpt: "How artificial intelligence is transforming the way we write and communicate in professional settings.",
-      readTime: "7 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop"
-    },
-    {
-      id: 2,
-      title: "Grammar Rules That Matter",
-      excerpt: "Essential grammar rules every writer should master for clear and effective communication.",
-      readTime: "5 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=400&h=300&fit=crop"
-    },
-    {
-      id: 3,
-      title: "Content Originality Best Practices",
-      excerpt: "Strategies to ensure your content is original and avoid plagiarism issues.",
-      readTime: "6 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1500673922987-e212871fec22?w=400&h=300&fit=crop"
-    },
-    {
-      id: 4,
-      title: "Translation Quality Metrics",
-      excerpt: "Understanding quality metrics in AI translation and how to achieve better results.",
-      readTime: "8 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1470813740244-df37b8c1edcb?w=400&h=300&fit=crop"
-    },
-    {
-      id: 5,
-      title: "Readability and Audience Engagement",
-      excerpt: "How improving readability scores can dramatically increase audience engagement rates.",
-      readTime: "9 min",
-      trending: true,
-      image: "https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=400&h=300&fit=crop"
-    },
-    {
-      id: 6,
-      title: "Multilingual Content Strategy",
-      excerpt: "Building effective multilingual content strategies for global audiences.",
-      readTime: "11 min",
-      trending: false,
-      image: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=400&h=300&fit=crop"
-    }
-  ];
+  const { posts: blogPosts } = useCuratedPosts({ context: 'category:text', fallbackLimit: 6 });
 
   return (
     <div className="min-h-screen">
@@ -193,20 +145,18 @@ const TextTools = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {blogPosts.map((post) => (
+            {(blogPosts || []).map((post: any) => (
               <Card key={post.id} className="tiktok-card group cursor-pointer overflow-hidden">
                 <div className="aspect-video overflow-hidden">
                   <img 
-                    src={post.image} 
+                    src={post.featured_image} 
                     alt={post.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 </div>
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-3">
-                    <Badge variant="secondary" className="text-xs">
-                      {post.readTime}
-                    </Badge>
+                    <Badge variant="secondary" className="text-xs">{post.published_at?.slice(0,10) || ''}</Badge>
                     {post.trending && (
                       <Badge className="bg-red-500 text-white text-xs">
                         🔥 Trending
