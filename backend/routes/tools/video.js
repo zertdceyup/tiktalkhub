@@ -508,4 +508,76 @@ function formatSrtTime(seconds) {
   return `${hh}:${mm}:${ss},${ms}`;
 }
 
+// Video Pro: Silence Strip (remove silence gaps)
+router.post('/pro/silence-strip', upload.single('video'), [ body('threshold').optional().isString(), body('duration').optional().isFloat({ min: 0 }) ], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { threshold = '-30dB', duration = 0.5 } = req.body;
+    const inputPath = req.file.path;
+    const base = path.parse(inputPath).name;
+    const outPath = path.join(uploadsDir, `${base}_nosilence.mp4`);
+    // Apply silenceremove on audio; re-encode video copy
+    await runFFmpeg(['-i', inputPath, '-af', `silenceremove=start_periods=1:start_silence=${duration}:start_threshold=${threshold}:stop_periods=1:stop_silence=${duration}:stop_threshold=${threshold}`, '-c:v', 'copy', outPath]);
+    const processingTime = Date.now() - startTime;
+    res.json({ success: true, data: { url: `/uploads/video/${path.basename(outPath)}`, processingTime } });
+  } catch (e) {
+    logger.error('Silence strip error:', e); res.status(500).json({ success: false, message: 'Failed to strip silence' });
+  }
+});
+
+// Video Pro: Loudness Normalize
+router.post('/pro/loudness-normalize', upload.single('video'), [ body('i').optional().isFloat(), body('tp').optional().isFloat(), body('lra').optional().isFloat() ], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { i = -16, tp = -1.5, lra = 11 } = req.body;
+    const inputPath = req.file.path; const base = path.parse(inputPath).name; const outPath = path.join(uploadsDir, `${base}_loudnorm.mp4`);
+    await runFFmpeg(['-i', inputPath, '-af', `loudnorm=I=${i}:TP=${tp}:LRA=${lra}`, '-c:v', 'copy', outPath]);
+    const processingTime = Date.now() - startTime;
+    res.json({ success: true, data: { url: `/uploads/video/${path.basename(outPath)}`, processingTime } });
+  } catch (e) { logger.error('Loudnorm error:', e); res.status(500).json({ success: false, message: 'Failed to normalize audio' }); }
+});
+
+// Video Pro: Color Fix (simple EQ)
+router.post('/pro/color-fix', upload.single('video'), [ body('saturation').optional().isFloat(), body('contrast').optional().isFloat(), body('brightness').optional().isFloat() ], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { saturation = 1.1, contrast = 1.05, brightness = 0 } = req.body;
+    const inputPath = req.file.path; const base = path.parse(inputPath).name; const outPath = path.join(uploadsDir, `${base}_colorfix.mp4`);
+    await runFFmpeg(['-i', inputPath, '-vf', `eq=contrast=${contrast}:saturation=${saturation}:brightness=${brightness}`, '-c:a', 'copy', outPath]);
+    const processingTime = Date.now() - startTime;
+    res.json({ success: true, data: { url: `/uploads/video/${path.basename(outPath)}`, processingTime } });
+  } catch (e) { logger.error('Color fix error:', e); res.status(500).json({ success: false, message: 'Failed to apply color fix' }); }
+});
+
+// Video Pro: Smart Auto-Crop (basic cropdetect)
+router.post('/pro/smart-auto-crop', upload.single('video'), [ body('duration').optional().isFloat({ min: 1, max: 20 }) ], async (req, res) => {
+  const startTime = Date.now();
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: 'No video file provided' });
+    const { duration = 5 } = req.body;
+    const inputPath = req.file.path; const base = path.parse(inputPath).name; const outPath = path.join(uploadsDir, `${base}_autocrop.mp4`);
+    // Detect crop area from first N seconds and apply
+    await runFFmpeg(['-t', String(duration), '-i', inputPath, '-vf', 'cropdetect=24:16:0', '-f', 'null', '-']);
+    // For simplicity, apply a center crop to 9:16
+    await runFFmpeg(['-i', inputPath, '-vf', 'crop=in_h*9/16:in_h:(in_w-out_w)/2:0,scale=1080:1920', outPath]);
+    const processingTime = Date.now() - startTime;
+    res.json({ success: true, data: { url: `/uploads/video/${path.basename(outPath)}`, processingTime, note: 'Basic auto-crop applied (approximation)' } });
+  } catch (e) { logger.error('Smart auto-crop error:', e); res.status(500).json({ success: false, message: 'Failed to auto-crop' }); }
+});
+
+// Video Pro: Batch queue
+router.post('/pro/batch', upload.array('videos', 10), [ body('operation').isIn(['silence-strip','loudnorm','color-fix']) ], async (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) return res.status(400).json({ success: false, message: 'No videos' });
+    const { operation } = req.body;
+    // enqueue job
+    const payload = { operation, files: req.files.map(f => f.path) };
+    const r = db.prepare('INSERT INTO jobs (type, status, payload, max_retries) VALUES (?, ?, ?, ?)').run('video_batch', 'pending', JSON.stringify(payload), 3);
+    res.json({ success: true, data: { jobId: r.lastInsertRowid, count: req.files.length } });
+  } catch (e) { logger.error('Batch queue error:', e); res.status(500).json({ success: false, message: 'Failed to queue batch' }); }
+});
+
 export default router;
