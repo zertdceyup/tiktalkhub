@@ -351,6 +351,17 @@ export const initializeDatabase = async () => {
       )
     `);
 
+    // Blog curation rules
+    await runSQL(`
+      CREATE TABLE IF NOT EXISTS blog_curation (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        context TEXT NOT NULL, -- e.g., 'home', 'category:video', 'path:/tools/video'
+        rule_json TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     // Create indexes for better performance
     await runSQL('CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)');
     await runSQL('CREATE INDEX IF NOT EXISTS idx_blog_posts_slug ON blog_posts(slug)');

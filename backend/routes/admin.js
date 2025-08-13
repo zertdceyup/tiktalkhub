@@ -889,4 +889,46 @@ router.delete('/page-blocks/:id', (req, res) => {
   }
 });
 
+// Blog curation rules
+router.get('/blog-curation', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM blog_curation ORDER BY updated_at DESC').all();
+    res.json({ success: true, rules: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to fetch curation rules' });
+  }
+});
+
+router.post('/blog-curation', [ body('context').isLength({ min: 1 }), body('rule').isObject() ], (req, res) => {
+  try {
+    const { context, rule } = req.body;
+    const r = db.prepare('INSERT INTO blog_curation (context, rule_json) VALUES (?, ?)').run(context, JSON.stringify(rule));
+    res.status(201).json({ success: true, id: r.lastInsertRowid });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to create curation rule' });
+  }
+});
+
+router.put('/blog-curation/:id', [ body('rule').isObject() ], (req, res) => {
+  try {
+    const { id } = req.params; const { rule } = req.body;
+    const r = db.prepare('UPDATE blog_curation SET rule_json = ?, updated_at = ? WHERE id = ?').run(JSON.stringify(rule), new Date().toISOString(), id);
+    if (r.changes === 0) return res.status(404).json({ success: false, message: 'Rule not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to update curation rule' });
+  }
+});
+
+router.delete('/blog-curation/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const r = db.prepare('DELETE FROM blog_curation WHERE id = ?').run(id);
+    if (r.changes === 0) return res.status(404).json({ success: false, message: 'Rule not found' });
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Failed to delete curation rule' });
+  }
+});
+
 export default router;

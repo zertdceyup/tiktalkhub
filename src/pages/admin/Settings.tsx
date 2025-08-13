@@ -64,6 +64,7 @@ const SettingsPage: React.FC = () => {
 
       {/* Page Design Tokens Manager */}
       <PageTokensManager />
+      <BlogCurationManager />
     </div>
   );
 };
@@ -121,6 +122,57 @@ const PageTokensManager: React.FC = () => {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+const BlogCurationManager: React.FC = () => {
+  const base = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+  const [rules, setRules] = useState<any[]>([]);
+  const [context, setContext] = useState<string>('home');
+  const [rule, setRule] = useState<string>('{}');
+
+  const load = async () => {
+    const res = await fetch(`${base}/admin/blog-curation`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) return; const j = await res.json(); setRules(j.rules || []);
+  };
+  useEffect(() => { load(); }, []);
+
+  const add = async () => {
+    const res = await fetch(`${base}/admin/blog-curation`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ context, rule: safeJson(rule) }) });
+    if (!res.ok) { alert('Create failed'); return; }
+    setRule('{}'); load();
+  };
+  const remove = async (id: number) => {
+    const res = await fetch(`${base}/admin/blog-curation/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) { alert('Delete failed'); return; }
+    load();
+  };
+
+  return (
+    <Card className="mt-8">
+      <CardHeader><CardTitle>Blog Curation Rules</CardTitle></CardHeader>
+      <CardContent>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Input value={context} onChange={(e) => setContext(e.target.value)} placeholder="home | category:video | path:/tools/video" />
+            <textarea className="w-full h-32 rounded border p-2 text-sm font-mono" value={rule} onChange={(e) => setRule(e.target.value)} placeholder='{"limit":6,"category":"video","pin":["post-slug-1"]}' />
+            <Button className="btn-gold" onClick={add}>Add Rule</Button>
+          </div>
+          <div className="space-y-2">
+            {rules.map((r) => (
+              <div key={r.id} className="border rounded p-3 text-sm flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-medium">{r.context}</div>
+                  <pre className="whitespace-pre-wrap break-all text-muted-foreground">{r.rule_json}</pre>
+                </div>
+                <Button variant="destructive" onClick={() => remove(r.id)}>Delete</Button>
+              </div>
+            ))}
           </div>
         </div>
       </CardContent>
